@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TimeTrails — Capture your journeys, beautifully.</title>
+    <meta name="description" content="TimeTrails is a privacy-first iOS app that turns your movements into beautiful, searchable trails — on-device first, fully in your control." />
+    <meta name="robots" content="index,follow" />
+    <meta name="theme-color" content="#0ea5e9" />
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TimeTrails — Capture your journeys, beautifully." />
+    <meta property="og:description" content="Privacy-first iOS app for location journaling and trail visualization." />
+    <meta property="og:url" content="https://<your-username>.github.io/timetrails/" />
+    <meta property="og:image" content="https://<your-username>.github.io/timetrails/assets/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- (Optional) Smart App Banner for iOS -->
+    <!-- <meta name="apple-itunes-app" content="app-id=0000000000, affiliate-data=, app-argument=timetrails://home"> -->
+
+    <link rel="icon" href="/timetrails/assets/favicon.png" />
+    <style>
+        :root{--bg:#0b1020;--card:#111827;--muted:#93a4b7;--text:#e6eef9;--accent:#22d3ee;--link:#7dd3fc;--brand:#0ea5e9}
+        @media (prefers-color-scheme: light){:root{--bg:#f8fafc;--card:#ffffff;--muted:#4b5563;--text:#0f172a;--accent:#0ea5e9;--link:#0369a1;--brand:#0284c7}}
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"}
+        a{color:var(--link); text-decoration:none}
+        a:hover{text-decoration:underline}
+        .wrap{max-width:1100px; margin:0 auto; padding:32px 16px}
+        .nav{display:flex; justify-content:space-between; align-items:center; gap:16px}
+        .logo{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px}
+        .logo img{width:28px; height:28px}
+        .nav a{opacity:.9}
+
+        .hero{display:grid; grid-template-columns: 1.05fr .95fr; gap:28px; align-items:center; margin-top:32px}
+        .hero h1{font-size:clamp(32px,3.8vw,48px); margin:0 0 10px}
+        .hero p{font-size:clamp(16px,1.5vw,18px); line-height:1.75; color:var(--muted)}
+        .cta{display:flex; gap:12px; margin-top:18px; flex-wrap:wrap}
+        .btn{display:inline-flex; align-items:center; gap:8px; padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,.16); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); color:var(--text); font-weight:600}
+        .btn:hover{transform:translateY(-1px)}
+        .ghost{background:transparent}
+
+        .phone{position:relative; background:var(--card); border:1px solid rgba(255,255,255,.1); border-radius:28px; padding:14px; aspect-ratio:9/18; box-shadow:0 10px 32px rgba(0,0,0,.35)}
+        .screen{border-radius:20px; overflow:hidden; height:100%; background: radial-gradient(120% 100% at 0% 0%, rgba(34,211,238,.25), transparent 60%), radial-gradient(120% 100% at 100% 100%, rgba(14,165,233,.25), transparent 60%), linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); display:flex; align-items:center; justify-content:center}
+        .screen img{max-width:90%; border-radius:16px; border:1px solid rgba(255,255,255,.15)}
+
+        .section{margin-top:56px}
+        .grid3{display:grid; grid-template-columns: repeat(3, 1fr); gap:16px}
+        .card{background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:22px; height:100%}
+        .card h3{margin:0 0 6px; font-size:18px}
+        .card p{margin:6px 0 0; color:var(--muted); line-height:1.7}
+        .kvs{display:grid; grid-template-columns: 180px 1fr; gap:10px 16px}
+
+        .footer{margin-top:56px; font-size:13px; color:var(--muted)}
+        .center{display:flex; align-items:center; justify-content:center}
+
+        @media (max-width: 980px){.hero{grid-template-columns: 1fr;}.phone{max-width:420px; margin:0 auto}}
+    </style>
+
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "TimeTrails",
+            "operatingSystem": "iOS",
+            "applicationCategory": "LifestyleApplication",
+            "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+            "url": "https://<your-username>.github.io/timetrails/",
+            "image": "https://<your-username>.github.io/timetrails/assets/og-image.png",
+            "publisher": {"@type": "Organization", "name": "Davion Labs"}
+        }
+    </script>
+</head>
+<body>
+<div class="wrap">
+    <!-- Nav -->
+    <nav class="nav">
+        <a class="logo" href="./">
+            <img src="/timetrails/assets/logo.png" alt="TimeTrails logo" />
+            <span>TimeTrails</span>
+        </a>
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+            <a href="./privacy.html">Privacy</a>
+            <a href="#features">Features</a>
+            <a href="#support">Support</a>
+            <a href="mailto:hello@timetrails.app">Contact</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="hero">
+        <div>
+            <h1>Capture your journeys, beautifully.</h1>
+            <p>TimeTrails turns your daily movements into a private, living map — on-device first with optional iCloud sync. Explore trails, pinpoint stays, and reflect on your life through place and time.</p>
+            <div class="cta">
+                <a class="btn" href="#download" aria-label="Download on the App Store">
+                    <!-- Replace with your real App Store badge -->
+                    <span> App Store (coming soon)</span>
+                </a>
+                <a class="btn ghost" href="./privacy.html">Privacy Policy</a>
+                <a class="btn ghost" href="#screens">Screenshots</a>
+            </div>
+        </div>
+        <div class="phone">
+            <div class="screen">
+                <!-- Replace with a real screenshot (1242×2688 or similar) -->
+                <img src="/timetrails/assets/screen-map.png" alt="TimeTrails map screenshot" />
+            </div>
+        </div>
+    </header>
+
+    <!-- Features -->
+    <section id="features" class="section">
+        <div class="grid3">
+            <div class="card">
+                <h3>On-device first</h3>
+                <p>Your trails and stays live on your device by default. Sync is optional and encrypted when enabled.</p>
+            </div>
+            <div class="card">
+                <h3>Precise & lightweight</h3>
+                <p>Smart sampling and accurate clustering give you meaningful paths without draining your battery.</p>
+            </div>
+            <div class="card">
+                <h3>Beautiful visualizations</h3>
+                <p>See your life unfold on clean, elegant maps with smooth lines, gradients, and interactive highlights.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots placeholder -->
+    <section id="screens" class="section">
+        <h2 style="margin:0 0 12px">Screenshots</h2>
+        <p class="footer">Replace the placeholder images below with your actual app screenshots.</p>
+        <div class="grid3" style="margin-top:14px">
+            <div class="card center"><img src="/timetrails/assets/screen-map.png" alt="Map screen" style="max-width:100%; border-radius:12px; border:1px solid rgba(255,255,255,.12)"/></div>
+            <div class="card center"><img src="/timetrails/assets/screen-stats.png" alt="Stats screen" style="max-width:100%; border-radius:12px; border:1px solid rgba(255,255,255,.12)"/></div>
+            <div class="card center"><img src="/timetrails/assets/screen-trail.png" alt="Trail detail" style="max-width:100%; border-radius:12px; border:1px solid rgba(255,255,255,.12)"/></div>
+        </div>
+    </section>
+
+    <!-- Support / Contact -->
+    <section id="support" class="section">
+        <div class="card">
+            <h2 style="margin:0 0 8px">Support</h2>
+            <p class="footer">Have questions or feedback? We’d love to hear from you.</p>
+            <div class="kvs" style="margin-top:8px">
+                <div style="color:var(--muted)">Email</div>
+                <div><a href="mailto:hello@timetrails.app">hello@timetrails.app</a> (replace with your actual email)</div>
+                <div style="color:var(--muted)">Press kit</div>
+                <div><a href="/timetrails/assets/press-kit.zip">Download</a> (logo, icons, screenshots)</div>
+                <div style="color:var(--muted)">Privacy</div>
+                <div><a href="./privacy.html">Privacy Policy</a></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="kvs">
+            <div style="color:var(--muted)">© <span id="year"></span> Davion Labs</div>
+            <div>Made with care. All rights reserved.</div>
+        </div>
+    </footer>
+</div>
+
+<script>
+    // little helpers
+    document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>

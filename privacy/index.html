@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-Hans" class="no-js">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>时光轨迹（TimeTrails）隐私权政策 | Privacy Policy</title>
+    <meta name="description" content="时光轨迹（TimeTrails）隐私权政策与数据说明 / Privacy Policy and Data Practices." />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:title" content="时光轨迹（TimeTrails）隐私权政策" />
+    <meta property="og:description" content="我们如何收集、使用与保护你的数据。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://<your-username>.github.io/timetrails/privacy.html" />
+    <meta property="og:image" content="https://<your-username>.github.io/timetrails/assets/og-image.png" />
+    <meta name="theme-color" content="#0ea5e9" />
+    <style>
+        :root{--bg: #0b1020; --card:#121a2a; --muted:#9fb0c6; --text:#e6eef9; --accent:#22d3ee; --link:#7dd3fc; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185}
+        @media (prefers-color-scheme: light){:root{--bg:#f8fafc;--card:#ffffff;--muted:#4b5563;--text:#0f172a;--accent:#0ea5e9;--link:#0369a1}}
+        *{box-sizing:border-box} html,body{margin:0;padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, PingFang SC, Noto Sans CJK SC, Helvetica Neue, Arial, "Apple Color Emoji","Segoe UI Emoji"; background: var(--bg); color: var(--text);}
+        .container{max-width: 960px; margin: 0 auto; padding: 40px 16px}
+        .card{background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 28px; box-shadow: 0 10px 30px rgba(0,0,0,.25)}
+        h1{font-size: clamp(28px, 3.6vw, 40px); margin: 0 0 12px; letter-spacing: .2px}
+        h2{font-size: clamp(20px, 2.2vw, 26px); margin: 28px 0 10px}
+        h3{font-size: 18px; margin: 22px 0 8px}
+        p,li{line-height: 1.7; color: var(--text)}
+        a{color: var(--link); text-decoration: none}
+        a:hover{text-decoration: underline}
+        .badge{display:inline-block; padding:4px 10px; border-radius:999px; font-weight:600; font-size:12px; background: rgba(34,211,238,.15); color: var(--accent); border: 1px solid rgba(34,211,238,.35)}
+        .kvs{display:grid; grid-template-columns: 200px 1fr; gap: 10px 16px}
+        .muted{color: var(--muted)}
+        .chip{display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; margin-right:6px; border:1px solid rgba(255,255,255,.16)}
+        .ok{background: rgba(52,211,153,.15); color: var(--ok); border-color: rgba(52,211,153,.35)}
+        .warn{background: rgba(251,191,36,.15); color: var(--warn); border-color: rgba(251,191,36,.35)}
+        .bad{background: rgba(251,113,133,.15); color: var(--bad); border-color: rgba(251,113,133,.35)}
+        .lang{display:flex; gap:8px; align-items:center}
+        .lang button{background:transparent; color:var(--text); border:1px solid rgba(255,255,255,.18); padding:6px 10px; border-radius:8px; cursor:pointer}
+        .lang button.active{border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34,211,238,.15)}
+        .divider{height:1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent); margin: 24px 0}
+        .footer{font-size: 13px; color: var(--muted)}
+        code{background: rgba(148,163,184,.15); padding:2px 6px; border-radius:6px}
+    </style>
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "时光轨迹（TimeTrails）隐私权政策",
+            "url": "https://<your-username>.github.io/timetrails/privacy.html",
+            "inLanguage": ["zh-Hans","en"],
+            "description": "时光轨迹（TimeTrails）隐私权政策与数据实践说明",
+            "isPartOf": {"@type":"WebSite","name":"TimeTrails","url":"https://<your-username>.github.io/timetrails/"}
+        }
+    </script>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div style="display:flex; justify-content: space-between; gap: 16px; align-items: center; flex-wrap: wrap">
+            <div>
+                <h1>时光轨迹（TimeTrails）隐私权政策</h1>
+                <div class="muted">Last updated: <span id="last-updated">2025-09-20</span></div>
+            </div>
+            <div class="lang" role="tablist" aria-label="Language">
+                <span class="muted">语言 / Language</span>
+                <button id="btn-zh" class="active" role="tab" aria-selected="true">中文</button>
+                <button id="btn-en" role="tab" aria-selected="false">English</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Chinese -->
+        <section id="zh">
+            <p>欢迎使用 <strong>时光轨迹（TimeTrails）</strong>。我们非常重视你的隐私与数据安全。本政策旨在以清晰、可读的方式说明我们在 <span class="chip ok">默认最小化收集</span>、<span class="chip ok">本地优先处理</span>、<span class="chip ok">用户可控</span> 的原则下如何处理你的信息。</p>
+
+            <h2>我们收集什么信息</h2>
+            <ul>
+                <li><strong>位置信息（可选）</strong>：用于记录你的行程轨迹、停留点与地图可视化。权限：<code>NSLocationWhenInUseUsageDescription</code>、<code>NSLocationAlwaysAndWhenInUseUsageDescription</code>。</li>
+                <li><strong>运动与健身（可选）</strong>：用于更精准地判断移动状态与里程统计。权限：<code>NSMotionUsageDescription</code>。</li>
+                <li><strong>照片访问（可选）</strong>：当你选择导入或关联照片时使用。权限：<code>NSPhotoLibraryAddUsageDescription</code>、<code>NSPhotoLibraryUsageDescription</code>。</li>
+                <li><strong>通知（可选）</strong>：用于交互提醒（如记录完成、同步状态）。</li>
+                <li><strong>崩溃与诊断数据（可选）</strong>：若你通过系统设置或 TestFlight 同意共享诊断信息，我们可能收到匿名崩溃日志以改进稳定性。</li>
+            </ul>
+
+            <h2>我们如何使用信息</h2>
+            <ul>
+                <li>在设备本地生成并呈现轨迹、统计与地图可视化。</li>
+                <li>（可选）当你启用 iCloud/私有服务器同步时，用于在你的设备之间保持数据一致。</li>
+                <li>改进应用性能、稳定性与用户体验（如基于匿名崩溃日志的修复）。</li>
+            </ul>
+
+            <h2>数据存储与保留</h2>
+            <ul>
+                <li><strong>本地优先</strong>：轨迹数据默认仅保存在你的设备本地。</li>
+                <li><strong>同步可选</strong>：若你启用 <span class="badge">iCloud 同步</span> 或 <span class="badge">自建服务器</span>，数据会按你的选择加密并传输到相应服务以实现多设备使用。</li>
+                <li><strong>保留期限</strong>：你可在应用内删除数据；我们不在应用外另行保留你的个人数据副本。</li>
+            </ul>
+
+            <h2>第三方服务</h2>
+            <p>应用可能使用 Apple 提供的服务（如 iCloud、系统定位等）。这些服务受其各自的条款与隐私政策约束。我们不向第三方出售你的个人数据。</p>
+
+            <h2>你的权利</h2>
+            <ul>
+                <li><strong>访问与导出</strong>：在应用内查看与导出你的数据（如 GPX/CSV，若提供）。</li>
+                <li><strong>更正与删除</strong>：编辑或删除你的记录、轨迹与媒体关联。</li>
+                <li><strong>权限控制</strong>：随时在 iOS 设置中撤回定位、运动、照片等权限。</li>
+                <li><strong>不同地区法规</strong>：我们尊重适用法律（如 GDPR/CCPA）。如需行使权利，请联系下方邮箱。</li>
+            </ul>
+
+            <h2>儿童隐私</h2>
+            <p>本应用面向普通大众，不针对儿童设计。若你认为我们在未经监护人同意的情况下收集了儿童信息，请联系我们进行处理。</p>
+
+            <h2>变更</h2>
+            <p>我们可能更新本政策以反映功能或法规的变化。重要变更会在应用内或此页面提示，并更新“最后更新时间”。</p>
+
+            <h2>联系我们</h2>
+            <div class="kvs">
+                <div class="muted">电子邮箱</div>
+                <div><a href="mailto:privacy@timetrails.app">privacy@timetrails.app</a>（请替换为你的实际邮箱）</div>
+                <div class="muted">开发者</div>
+                <div>Davion Labs（请按你的公司/个人主体替换）</div>
+                <div class="muted">地址</div>
+                <div>（可选）你的通信地址</div>
+            </div>
+        </section>
+
+        <!-- English -->
+        <section id="en" style="display:none">
+            <p>Welcome to <strong>TimeTrails</strong>. We care deeply about your privacy and data security. This policy explains our practices under the principles of <span class="chip ok">data minimization</span>, <span class="chip ok">on-device first</span>, and <span class="chip ok">user control</span>.</p>
+
+            <h2>Information We Collect</h2>
+            <ul>
+                <li><strong>Location (optional)</strong>: Used to record your trails, stays, and map visualization. Permissions: <code>NSLocationWhenInUseUsageDescription</code>, <code>NSLocationAlwaysAndWhenInUseUsageDescription</code>.</li>
+                <li><strong>Motion & Fitness (optional)</strong>: Improves movement detection and distance metrics. Permission: <code>NSMotionUsageDescription</code>.</li>
+                <li><strong>Photos (optional)</strong>: When you choose to import or link photos. Permissions: <code>NSPhotoLibraryAddUsageDescription</code>, <code>NSPhotoLibraryUsageDescription</code>.</li>
+                <li><strong>Notifications (optional)</strong>: For reminders and status updates.</li>
+                <li><strong>Crash & diagnostics (optional)</strong>: If you opt in via system settings or TestFlight, we may receive anonymized crash reports to improve stability.</li>
+            </ul>
+
+            <h2>How We Use Information</h2>
+            <ul>
+                <li>Generate trails, stats, and maps on your device.</li>
+                <li>(Optional) If you enable iCloud/private server sync, keep your data consistent across devices.</li>
+                <li>Improve performance, stability, and UX (e.g., via anonymized crash logs).</li>
+            </ul>
+
+            <h2>Storage & Retention</h2>
+            <ul>
+                <li><strong>On-device first</strong>: Data is stored locally by default.</li>
+                <li><strong>Optional sync</strong>: If you enable <span class="badge">iCloud</span> or a <span class="badge">self-hosted server</span>, data is encrypted and transmitted as needed to provide multi-device access.</li>
+                <li><strong>Retention</strong>: You can delete data in-app; we do not keep separate copies outside the app.</li>
+            </ul>
+
+            <h2>Third-Party Services</h2>
+            <p>We may use Apple services (e.g., iCloud, Core Location). These are governed by their own terms and privacy policies. We do not sell your personal data.</p>
+
+            <h2>Your Rights</h2>
+            <ul>
+                <li><strong>Access & Export</strong>: View and export your data (e.g., GPX/CSV, if available).</li>
+                <li><strong>Rectification & Deletion</strong>: Edit or delete your records and associations.</li>
+                <li><strong>Permissions Control</strong>: Revoke location, motion, photo permissions anytime in iOS settings.</li>
+                <li><strong>Regional Laws</strong>: We respect applicable laws (e.g., GDPR/CCPA). Contact us to exercise your rights.</li>
+            </ul>
+
+            <h2>Children's Privacy</h2>
+            <p>This app is intended for a general audience and not directed to children. If you believe we collected information from a child without guardian consent, contact us for remediation.</p>
+
+            <h2>Changes</h2>
+            <p>We may update this policy to reflect feature or regulatory changes. Significant updates will be communicated in-app or on this page with an updated “Last updated” date.</p>
+
+            <h2>Contact</h2>
+            <div class="kvs">
+                <div class="muted">Email</div>
+                <div><a href="mailto:privacy@timetrails.app">privacy@timetrails.app</a> (replace with your actual email)</div>
+                <div class="muted">Developer</div>
+                <div>Davion Labs (replace with your legal entity)</div>
+                <div class="muted">Address</div>
+                <div>(optional) Mailing address</div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+        <div class="footer">
+            <p>提示 / Notes：</p>
+            <ul>
+                <li>请在 Xcode 的 <code>InfoPlist.strings</code> 中确保与上文一致的权限用途文案。</li>
+                <li>若你接入了额外服务（例如第三方崩溃分析、分析 SDK、地图瓦片服务等），请在“第三方服务”处补充其名称、用途与链接。</li>
+                <li>如开启网站自定义域名（例如 <code>privacy.timetrails.app</code>），请在本页 head 区域更新 <code>og:url</code> 与 JSON-LD。</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    // simple i18n toggle
+    const btnZh = document.getElementById('btn-zh');
+    const btnEn = document.getElementById('btn-en');
+    const zh = document.getElementById('zh');
+    const en = document.getElementById('en');
+
+    function setLang(lang){
+      const isZh = lang === 'zh';
+      zh.style.display = isZh ? '' : 'none';
+      en.style.display = isZh ? 'none' : '';
+      btnZh.classList.toggle('active', isZh);
+      btnEn.classList.toggle('active', !isZh);
+      document.documentElement.lang = isZh ? 'zh-Hans' : 'en';
+      localStorage.setItem('tt_lang', lang);
+    }
+    btnZh.addEventListener('click', () => setLang('zh'));
+    btnEn.addEventListener('click', () => setLang('en'));
+    setLang(localStorage.getItem('tt_lang') || 'zh');
+</script>
+</body>
+</html>
