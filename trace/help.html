@@ -80,15 +80,16 @@
     </header>
 
     <nav class="tabs" role="tablist" aria-label="主选项卡">
+      <div class="tab" role="tab" id="tab-appstore"
+           aria-controls="panel-appstore" aria-selected="false" tabindex="-1"
+           data-tab="appstore">去商店评价</div>
       <div class="tab" role="tab" id="tab-feedback"
            aria-controls="panel-feedback" aria-selected="true" tabindex="0"
            data-tab="feedback">提交反馈</div>
       <div class="tab" role="tab" id="tab-community"
            aria-controls="panel-community" aria-selected="false" tabindex="-1"
            data-tab="community">加入交流群</div>
-      <div class="tab" role="tab" id="tab-appstore"
-           aria-controls="panel-appstore" aria-selected="false" tabindex="-1"
-           data-tab="appstore">去商店评价</div>
+      
     </nav>
 
     <!-- 提交反馈 -->
@@ -282,7 +283,7 @@
     (function initTabs(){
       const url = new URL(location.href);
       const q = (url.searchParams.get('tab') || '').toLowerCase();
-      const key = (q === 'community' || q === 'appstore') ? q : 'feedback';
+      const key = (q === 'community' || q === 'appstore') ? q : 'appstore';
       selectByKey(key, { focus:false });
     })();
 
