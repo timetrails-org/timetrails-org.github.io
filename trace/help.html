@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>意见反馈｜加入社群</title>
+  <title>意见反馈｜加入社群｜去商店评价</title>
   <meta name="color-scheme" content="light dark" />
   <style>
     :root{
@@ -51,7 +51,6 @@
 
     .muted{ color:var(--muted); font-size:13px; }
     .grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:16px; }
-    .qr{ display:flex; flex-direction:column; align-items:center; gap:8px; }
     .kvs{ display:grid; grid-template-columns: 1fr auto; gap:8px; }
     .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
@@ -61,13 +60,6 @@
 
     .badge{ display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border); }
     .badge.full{ background:linear-gradient(135deg, var(--warn), #e67e22); color:white; border:none; }
-
-    .qrbox{
-      width:180px; height:180px;
-      border-radius:12px; border:1px solid var(--border);
-      display:flex; align-items:center; justify-content:center;
-      overflow:hidden; background:transparent;
-    }
 
     footer{ margin:22px 4px; text-align:center; color:var(--muted); font-size:12px; }
 
@@ -80,23 +72,26 @@
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
         <div>
-          <h1>意见反馈 / 加入社群</h1>
+          <h1>意见反馈 / 加入社群 / 去商店评价</h1>
           <div class="muted">静态单页 · 适配 GitHub Pages · 无后端</div>
         </div>
       </div>
-      <a class="btn" id="ghLink" target="_blank" rel="noopener">查看仓库</a>
+      <a class="btn" id="ghLink" target="_blank" rel="noopener">仓库主页</a>
     </header>
 
-    <nav class="tabs" role="tablist" aria-label="反馈/社群切换">
+    <nav class="tabs" role="tablist" aria-label="主选项卡">
       <div class="tab" role="tab" id="tab-feedback"
            aria-controls="panel-feedback" aria-selected="true" tabindex="0"
            data-tab="feedback">提交反馈</div>
       <div class="tab" role="tab" id="tab-community"
            aria-controls="panel-community" aria-selected="false" tabindex="-1"
            data-tab="community">加入交流群</div>
+      <div class="tab" role="tab" id="tab-appstore"
+           aria-controls="panel-appstore" aria-selected="false" tabindex="-1"
+           data-tab="appstore">去商店评价</div>
     </nav>
 
-    <!-- 反馈卡片 -->
+    <!-- 提交反馈 -->
     <section class="card" id="panel-feedback" role="tabpanel" aria-labelledby="tab-feedback" aria-hidden="false">
       <div class="row">
         <label for="fb-title">标题</label>
@@ -136,33 +131,18 @@
         </div>
       </div>
 
-      <!-- App Store 评价 -->
-      <div class="row" id="row-appstore" hidden>
-        <label>App Store 评价</label>
-        <div>
-          <div class="btns">
-            <a class="btn warn" id="btn-appstore-review">去 App Store 评价</a>
-            <a class="btn" id="btn-appstore-copy">复制评价链接</a>
-          </div>
-          <div class="qr" style="margin-top:12px;">
-            <div id="appstore-qr" class="qrbox" aria-label="App Store 评价二维码"></div>
-            <div class="muted">用手机扫码直达“撰写评价”页。</div>
-          </div>
-        </div>
-      </div>
-
       <div class="btns">
         <a class="btn primary" id="btn-issue" target="_blank" rel="noopener">通过 GitHub Issue 提交</a>
         <a class="btn" id="btn-mail">通过邮件提交</a>
         <button id="btn-copy-template">复制模板</button>
       </div>
-      <p class="muted">提示：若 GitHub 需要登录，你也可以直接前往 App Store 评价或通过邮件反馈。</p>
+      <p class="muted">提示：若 GitHub 需要登录，你也可以切到“去商店评价”或通过邮件反馈。</p>
     </section>
 
-    <!-- 社群卡片（仅 QQ 群；无微信） -->
+    <!-- 加入交流群（QQ） -->
     <section class="card" id="panel-community" role="tabpanel" aria-labelledby="tab-community" hidden aria-hidden="true">
       <div class="grid">
-        <!-- QQ 群 1 -->
+        <!-- 群 1 -->
         <div>
           <h3>QQ 群 1</h3>
           <div class="kvs">
@@ -173,13 +153,9 @@
             <a class="btn success" id="btn-qq1-join" target="_blank" rel="noopener">一键加群</a>
             <a class="btn" id="btn-qq1-url-copy">复制加群链接</a>
           </div>
-          <div class="qr" style="margin-top:12px;">
-            <div id="qq1-qr" class="qrbox" aria-label="QQ群1 邀请二维码"></div>
-            <div class="muted">此二维码由前端根据邀请链接实时生成。</div>
-          </div>
         </div>
 
-        <!-- QQ 群 2（已满） -->
+        <!-- 群 2（已满） -->
         <div>
           <h3>QQ 群 2 <span class="badge full">已满</span></h3>
           <div class="kvs">
@@ -190,11 +166,21 @@
             <a class="btn success disabled" id="btn-qq2-join" aria-disabled="true" tabindex="-1">一键加群（已满）</a>
             <a class="btn" id="btn-qq2-url-copy">复制加群链接</a>
           </div>
-          <div class="qr" style="margin-top:12px;">
-            <div id="qq2-qr" class="qrbox" aria-label="QQ群2 邀请二维码"></div>
-            <div class="muted">此二维码由前端根据邀请链接实时生成。</div>
-          </div>
         </div>
+      </div>
+    </section>
+
+    <!-- 去商店评价（一级 Tab） -->
+    <section class="card" id="panel-appstore" role="tabpanel" aria-labelledby="tab-appstore" hidden aria-hidden="true">
+      <div class="row">
+        <label>App Store</label>
+        <div class="btns">
+          <a class="btn warn" id="btn-appstore-review">去 App Store 评价</a>
+          <a class="btn" id="btn-appstore-copy">复制评价链接</a>
+          <a class="btn" id="btn-appstore-open">打开 App 详情页</a>
+          <a class="btn" id="btn-appstore-copy-detail">复制详情页链接</a>
+        </div>
+        <p class="muted" style="margin-top:8px;">在 iPhone/iPad 上会尝试直接拉起 App Store；其他平台将打开网页版。</p>
       </div>
     </section>
 
@@ -204,31 +190,25 @@
   </div>
 
   <script>
-    // ======== 1) 配置 ========
+    // ======== 配置 ========
     const CONFIG = {
-      // GitHub 仓库（用于 Issue）
       GH_OWNER: "timetrails-org",
       GH_REPO:  "timetrails-org.github.io",
-
-      // 备用邮箱
       MAIL_TO:  "flywithbug@163.com",
 
-      // QQ 群
       QQ1_NUMBER: "574966492",
       QQ1_INVITE_URL: "https://qm.qq.com/q/WmKwcZcZW",
       QQ2_NUMBER: "185198503",
       QQ2_INVITE_URL: "https://qm.qq.com/q/J1eYFA7i4m",
-      QQ2_IS_FULL: true, // 已满
+      QQ2_IS_FULL: true,
 
-      // App Store（评价）
       IOS_APP_ID: "1634761411",
-      IOS_APP_COUNTRY: "cn",   // 中国区
+      IOS_APP_COUNTRY: "cn",
 
-      // 仓库主页
       GH_HOMEPAGE: "https://github.com/timetrails-org/timetrails-org.github.io"
     };
 
-    // ======== 2) 工具函数 ========
+    // ======== 工具 ========
     const $ = (sel, root=document) => root.querySelector(sel);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
@@ -241,75 +221,20 @@
         .catch(()=> alert('复制失败，请手动复制'));
     }
 
-    // A) 动态加载二维码库（多 CDN 轮询）
-    async function loadQRCodeLib(){
-      if (window.QRCode) return true;
-      const srcs = [
-        // 如需离线/国内稳定，优先把 qrcode.min.js 放到仓库并把第一项改成本地路径
-        'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
-        'https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js',
-        'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js',
-      ];
-      for (const src of srcs){
-        try{
-          await new Promise((resolve, reject)=>{
-            const s = document.createElement('script');
-            s.src = src; s.async = true; s.onload = resolve; s.onerror = reject;
-            document.head.appendChild(s);
-          });
-          if (window.QRCode) {
-            console.log('[QR] loaded from', src);
-            return true;
-          }
-        }catch(e){
-          console.warn('[QR] load failed:', src, e);
-        }
-      }
-      console.error('[QR] 所有 CDN 加载失败。建议本地托管 qrcode.min.js');
-      return false;
-    }
-
-    // B) 画二维码：优先 Canvas，失败回退 SVG
-    async function drawQR(containerId, text, size = 180){
-      const box = document.getElementById(containerId);
-      if(!box){ console.error('[QR] 容器不存在:', containerId); return; }
-      if(!text){ box.textContent = '无有效链接'; return; }
-
-      const ok = await loadQRCodeLib();
-      if(!ok){ box.textContent = '二维码库加载失败'; return; }
-
-      box.innerHTML = '';
-      try{
-        const canvas = document.createElement('canvas');
-        box.appendChild(canvas);
-        await QRCode.toCanvas(canvas, text, { width:size, margin:1, errorCorrectionLevel:'M' });
-        return;
-      }catch(err){
-        console.warn('[QR] Canvas 失败，回退 SVG:', err);
-        box.innerHTML = '';
-      }
-      try{
-        const svgStr = await QRCode.toString(text, { type:'svg', width:size, margin:1, errorCorrectionLevel:'M' });
-        box.innerHTML = svgStr;
-      }catch(err2){
-        console.error('[QR] SVG 也失败:', err2);
-        box.textContent = '二维码生成失败';
-      }
-    }
-
-    // App Store 评价链接
-    function getAppStoreReviewURLs(appId, country="cn"){
-      if(!appId) return { web:"#", ios:"#"};
-      const web = `https://apps.apple.com/${encodeURIComponent(country)}/app/id${encodeURIComponent(appId)}?action=write-review`;
-      const ios = `itms-apps://itunes.apple.com/app/id${encodeURIComponent(appId)}?action=write-review`;
-      return { web, ios };
+    function getAppStoreURLs(appId, country="cn"){
+      if(!appId) return { review:{web:"#",ios:"#"}, detail:{web:"#",ios:"#"} };
+      const webDetail = `https://apps.apple.com/${encodeURIComponent(country)}/app/id${encodeURIComponent(appId)}`;
+      const iosDetail = `itms-apps://itunes.apple.com/app/id${encodeURIComponent(appId)}`;
+      const webReview = `${webDetail}?action=write-review`;
+      const iosReview = `${iosDetail}?action=write-review`;
+      return { review:{ web:webReview, ios:iosReview }, detail:{ web:webDetail, ios:iosDetail } };
     }
     function isIOSDevice(){
       const ua = navigator.userAgent || navigator.vendor || window.opera || "";
       return /iPad|iPhone|iPod/.test(ua) || (navigator.platform && /iP(hone|od|ad)/.test(navigator.platform));
     }
 
-    // ======== 3) Tab（无障碍 + 键盘 + URL 同步；默认提交反馈） ========
+    // ======== Tabs（无障碍 + 键盘 + URL 同步；默认 feedback） ========
     const tablist = document.querySelector('.tabs[role="tablist"]');
     const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
     const panels = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')));
@@ -353,33 +278,31 @@
       e.preventDefault();
     });
 
-    // —— 默认“提交反馈”；仅当 ?tab=community 时切社群 —— //
+    // 默认“提交反馈”；仅当 ?tab=community|appstore 时切换
     (function initTabs(){
       const url = new URL(location.href);
-      const q = url.searchParams.get('tab');
-      const key = (q === 'community') ? 'community' : 'feedback';
+      const q = (url.searchParams.get('tab') || '').toLowerCase();
+      const key = (q === 'community' || q === 'appstore') ? q : 'feedback';
       selectByKey(key, { focus:false });
     })();
 
-    // ======== 4) 初始化仓库/按钮/QQ群/评价 ========
+    // ======== 初始化按钮/链接 ========
     // 仓库
     $('#ghLink').href = CONFIG.GH_HOMEPAGE;
-    $('#ghLink').textContent = '仓库主页';
 
+    // 复制群号按钮
     $$('button[data-copy]').forEach(btn=>{
       btn.addEventListener('click', ()=> copyTextFrom(btn.getAttribute('data-copy')));
     });
 
-    // QQ 群 1
+    // QQ 群
     $('#qq1-number').value = CONFIG.QQ1_NUMBER || '';
     $('#btn-qq1-join').href = CONFIG.QQ1_INVITE_URL || '#';
     $('#btn-qq1-url-copy').addEventListener('click', ()=>{
-      if(!CONFIG.QQ1_INVITE_URL){ alert('请先在代码中配置 QQ1_INVITE_URL'); return; }
+      if(!CONFIG.QQ1_INVITE_URL){ alert('请先配置 QQ1_INVITE_URL'); return; }
       navigator.clipboard.writeText(CONFIG.QQ1_INVITE_URL).then(()=> alert('已复制加群链接'));
     });
-    drawQR('qq1-qr', CONFIG.QQ1_INVITE_URL, 180);
 
-    // QQ 群 2（已满）
     $('#qq2-number').value = CONFIG.QQ2_NUMBER || '';
     const join2 = $('#btn-qq2-join');
     if(CONFIG.QQ2_IS_FULL){
@@ -391,38 +314,36 @@
       join2.href = CONFIG.QQ2_INVITE_URL || '#';
     }
     $('#btn-qq2-url-copy').addEventListener('click', ()=>{
-      if(!CONFIG.QQ2_INVITE_URL){ alert('请先在代码中配置 QQ2_INVITE_URL'); return; }
+      if(!CONFIG.QQ2_INVITE_URL){ alert('请先配置 QQ2_INVITE_URL'); return; }
       navigator.clipboard.writeText(CONFIG.QQ2_INVITE_URL).then(()=> alert('已复制加群链接'));
     });
-    drawQR('qq2-qr', CONFIG.QQ2_INVITE_URL, 180);
 
-    // App Store 评价（如果配置了 APP ID 则显示）
-    (function initAppStoreReview(){
-      const row = $('#row-appstore');
+    // App Store（一级 Tab）
+    (function initAppStore(){
       const appId = (CONFIG.IOS_APP_ID || '').trim();
-      if(!appId){ row.hidden = true; return; }
-      row.hidden = false;
+      const panel = $('#panel-appstore');
+      if(!appId){ panel.querySelector('.btns').style.display='none'; panel.insertAdjacentHTML('beforeend','<p class="muted">未配置 App ID。</p>'); return; }
 
-      const { web, ios } = getAppStoreReviewURLs(appId, CONFIG.IOS_APP_COUNTRY || 'cn');
+      const urls = getAppStoreURLs(appId, CONFIG.IOS_APP_COUNTRY || 'cn');
 
-      // 评价按钮：iOS 走 itms-apps，其它走 web
       $('#btn-appstore-review').addEventListener('click', ()=>{
-        const url = isIOSDevice() ? ios : web;
+        const url = isIOSDevice() ? urls.review.ios : urls.review.web;
         window.location.href = url;
       });
-
-      // 复制链接（统一复制 web 链接）
       $('#btn-appstore-copy').addEventListener('click', ()=>{
-        navigator.clipboard.writeText(web)
-          .then(()=> alert('已复制 App Store 评价链接'))
-          .catch(()=> alert('复制失败，请手动复制'));
+        navigator.clipboard.writeText(urls.review.web).then(()=> alert('已复制评价链接'));
       });
 
-      // 生成二维码（指向 web 链接）
-      drawQR('appstore-qr', web, 180);
+      $('#btn-appstore-open').addEventListener('click', ()=>{
+        const url = isIOSDevice() ? urls.detail.ios : urls.detail.web;
+        window.location.href = url;
+      });
+      $('#btn-appstore-copy-detail').addEventListener('click', ()=>{
+        navigator.clipboard.writeText(urls.detail.web).then(()=> alert('已复制详情页链接'));
+      });
     })();
 
-    // ======== 5) 反馈模板与提交 ========
+    // 反馈模板与提交
     const titleEl = $('#fb-title');
     const typeEl = $('#fb-type');
     const contentEl = $('#fb-content');
@@ -480,7 +401,7 @@
 
     function buildMailto(){
       if(!CONFIG.MAIL_TO){
-        alert('请先在代码中配置 MAIL_TO');
+        alert('请在代码中配置 MAIL_TO');
         return '#';
       }
       const { title, body } = buildMarkdown();
@@ -499,7 +420,7 @@
     $('#btn-copy-template').addEventListener('click', ()=>{
       const { title, body } = buildMarkdown();
       const all = `# ${title}\n\n${body}`;
-      navigator.clipboard.writeText(all).then(()=> alert('已复制反馈模板，粘贴到任意渠道即可')).catch(()=> alert('复制失败'));
+      navigator.clipboard.writeText(all).then(()=> alert('已复制反馈模板')).catch(()=> alert('复制失败'));
     });
   </script>
 </body>
