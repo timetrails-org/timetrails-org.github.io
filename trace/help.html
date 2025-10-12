@@ -5,12 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>意见反馈｜加入社群</title>
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#11131a" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#ffffff"  media="(prefers-color-scheme: light)">
-  <meta name="description" content="提交问题与建议，加入 QQ 交流群。静态单页，适配 GitHub Pages。">
   <style>
-    :root{ --bg:#0b0c0f; --panel:#11131a; --card:#151823; --text:#e6e6eb; --muted:#9aa0aa; --brand:#6aa4ff; --ok:#2ecc71; --warn:#f39c12; --danger:#e74c3c; --border:#232737; --shadow:0 8px 24px rgba(0,0,0,.35); }
-    @media (prefers-color-scheme: light){ :root{ --bg:#f6f7fb; --panel:#fff; --card:#fff; --text:#11131a; --muted:#6b7280; --border:#e5e7eb; --shadow:0 10px 30px rgba(17,24,39,.06);} }
+    :root{
+      --bg: #0b0c0f;
+      --panel: #11131a;
+      --card: #151823;
+      --text: #e6e6eb;
+      --muted:#9aa0aa;
+      --brand:#6aa4ff;
+      --ok:#2ecc71;
+      --warn:#f39c12;
+      --danger:#e74c3c;
+      --border: #232737;
+      --shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#f6f7fb; --panel:#ffffff; --card:#ffffff; --text:#11131a; --muted:#6b7280; --border:#e5e7eb; --shadow:0 10px 30px rgba(17,24,39,.06); }
+    }
     *{ box-sizing:border-box; }
     body{ margin:0; font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji"; background:var(--bg); color:var(--text); }
     .wrap{ max-width:960px; margin:32px auto; padding:0 16px; }
@@ -35,14 +46,13 @@
     button.primary, .btn.primary{ background:linear-gradient(135deg, var(--brand), #9d7dff); border:none; color:white; }
     .btn.success{ background:linear-gradient(135deg, #2ecc71, #27ae60); border:none; color:white; }
     .btn.warn{ background:linear-gradient(135deg, #f39c12, #e67e22); border:none; color:white; }
-    .btn.disabled{ opacity:.55; cursor:not-allowed; filter:grayscale(.3); }
 
     .muted{ color:var(--muted); font-size:13px; }
     .grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:16px; }
     .qr{ display:flex; flex-direction:column; align-items:center; gap:8px; }
     .qr img{ width:180px; height:180px; object-fit:cover; border-radius:12px; border:1px solid var(--border); }
     .kvs{ display:grid; grid-template-columns: 1fr auto; gap:8px; }
-    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
     .stars{ display:flex; gap:6px; }
     .star{ width:28px; height:28px; border-radius:50%; display:grid; place-items:center; border:1px solid var(--border); cursor:pointer; }
@@ -63,16 +73,16 @@
           <div class="muted">静态单页 · 适配 GitHub Pages · 无后端</div>
         </div>
       </div>
-      <a class="btn" id="ghLink" target="_blank" rel="noopener noreferrer">查看仓库</a>
+      <a class="btn" id="ghLink" target="_blank" rel="noopener">查看仓库</a>
     </header>
 
     <nav class="tabs" role="tablist">
-      <div class="tab" role="tab" id="tab-feedback" aria-selected="true" tabindex="0">提交反馈</div>
-      <div class="tab" role="tab" id="tab-community" aria-selected="false" tabindex="-1">加入交流群</div>
+      <div class="tab" role="tab" id="tab-feedback" aria-selected="false" tabindex="-1" data-tab="feedback">提交反馈</div>
+      <div class="tab" role="tab" id="tab-community" aria-selected="true" tabindex="0" data-tab="community">加入交流群</div>
     </nav>
 
     <!-- 反馈卡片 -->
-    <section class="card" id="panel-feedback" role="tabpanel" aria-labelledby="tab-feedback">
+    <section class="card" id="panel-feedback" role="tabpanel" aria-labelledby="tab-feedback" hidden>
       <div class="row">
         <label for="fb-title">标题</label>
         <input id="fb-title" type="text" placeholder="简要描述你的问题或建议" />
@@ -111,20 +121,46 @@
         </div>
       </div>
       <div class="btns">
-        <a class="btn primary" id="btn-issue" target="_blank" rel="noopener noreferrer">通过 GitHub Issue 提交</a>
+        <a class="btn primary" id="btn-issue" target="_blank" rel="noopener">通过 GitHub Issue 提交</a>
         <a class="btn" id="btn-mail">通过邮件提交</a>
         <button id="btn-copy-template">复制模板</button>
       </div>
       <p class="muted">提示：GitHub Issue 方式推荐；若仓库未开启 Issue，可使用邮件或直接加入群交流。</p>
     </section>
 
-    <!-- 社群卡片（仅 QQ） -->
-    <section class="card" id="panel-community" role="tabpanel" aria-labelledby="tab-community" hidden>
-      <div>
-        <h3>QQ 交流群</h3>
-        <p class="muted">提供两个群：1 号群为主群；2 号群已满，仅保留展示。</p>
+    <!-- 社群卡片 -->
+    <section class="card" id="panel-community" role="tabpanel" aria-labelledby="tab-community">
+      <div class="grid">
+        <div>
+          <h3>QQ 群</h3>
+          <div class="kvs">
+            <input id="qq-number" class="mono" type="text" readonly />
+            <button data-copy="#qq-number">复制群号</button>
+          </div>
+          <div class="btns" style="margin-top:10px;">
+            <a class="btn success" id="btn-qq-join" target="_blank" rel="noopener">一键加群</a>
+            <a class="btn" id="btn-qq-url-copy">复制加群链接</a>
+          </div>
+          <div class="qr" style="margin-top:12px;">
+            <img id="qq-qr" alt="QQ 群二维码（请替换为你的图片文件）" src="qq-qrcode.png" />
+            <div class="muted">将仓库中的 <span class="mono">qq-qrcode.png</span> 替换为你的群二维码图片。</div>
+          </div>
+        </div>
+        <div>
+          <h3>微信</h3>
+          <div class="kvs">
+            <input id="wx-id" class="mono" type="text" readonly />
+            <button data-copy="#wx-id">复制微信号</button>
+          </div>
+          <div class="btns" style="margin-top:10px;">
+            <a class="btn warn" id="btn-wx-open">打开微信（移动端）</a>
+          </div>
+          <div class="qr" style="margin-top:12px;">
+            <img id="wx-qr" alt="微信二维码（请替换为你的图片文件）" src="wechat-qrcode.png" />
+            <div class="muted">将仓库中的 <span class="mono">wechat-qrcode.png</span> 替换为你的微信/公众号/客服二维码。</div>
+          </div>
+        </div>
       </div>
-      <div class="grid" id="qq-container"></div>
     </section>
 
     <footer>
@@ -135,84 +171,94 @@
   <script>
     // ======== 1) 需要你配置的常量（编辑为你的信息） ========
     const CONFIG = {
-      GH_OWNER: "your-github-username",   // ← 修改为你的 GitHub 用户名或组织名
-      GH_REPO:  "your-repo",              // ← 修改为你的仓库名
-      MAIL_TO:  "feedback@example.com",   // ← 修改为你的收件邮箱
-      GH_HOMEPAGE:    "https://github.com/your-github-username/your-repo",
+      // 仓库信息：用于生成 Issue 链接（推荐开通 Issues）
+      GH_OWNER: "timetrails-org",   // ← 组织名
+      GH_REPO:  "timetrails-org.github.io", // ← 仓库名
 
-      // 多个 QQ 群配置（已按你的信息填好）
-      QQ_LIST: [
-        { id: "574966492", name: "交流群 1（主群）", invite: "https://qm.qq.com/q/WmKwcZcZW", full: false },
-        { id: "185198503", name: "交流群 2（已满）", invite: "https://qm.qq.com/q/J1eYFA7i4m", full: true }
-      ]
+      // 备用邮箱（未开 Issue 或用户不方便使用 GitHub）
+      MAIL_TO:  "flywithbug@163.com",
+
+      // QQ 群信息（自行替换）
+      QQ_NUMBER:      "",        // ← 你的 QQ 群号（可留空）
+      QQ_INVITE_URL:  "https://qm.qq.com/cgi-bin/qm/qr?k=YOUR_QQ_INVITE_TOKEN", // ← 替换为你的加群邀请链接
+
+      // 微信（个人号 / 工作号 / 公众号）
+      WECHAT_ID:      "",   // ← 你的微信号；或留空仅展示二维码
+
+      // 仓库主页（右上角按钮用）
+      GH_HOMEPAGE:    "https://timetrails-org.github.io/trace/help.html"
     };
 
     // ======== 2) 工具函数 ========
     const $ = (sel, root=document) => root.querySelector(sel);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
-    function toast(msg) {
-      const t = document.createElement('div');
-      t.textContent = msg;
-      t.style.cssText = 'position:fixed;left:50%;top:20px;transform:translateX(-50%);background:#000a;color:#fff;padding:8px 12px;border-radius:8px;z-index:9999';
-      document.body.appendChild(t);
-      setTimeout(()=>t.remove(), 1600);
-    }
-
-    async function copyText(text){
-      try { await navigator.clipboard.writeText(text); toast('已复制到剪贴板'); }
-      catch {
-        const ta = document.createElement('textarea');
-        ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px';
-        document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,ta.value.length);
-        const ok = document.execCommand('copy'); document.body.removeChild(ta);
-        toast(ok ? '已复制到剪贴板' : '复制失败，请手动复制');
-      }
-    }
-
-    // ======== 3) Tab 切换 & 辅助可访问性 ========
-    const tabFeedback = $('#tab-feedback');
-    const tabCommunity = $('#tab-community');
-    const panelFeedback = $('#panel-feedback');
-    const panelCommunity = $('#panel-community');
-
-    tabFeedback.setAttribute('aria-controls', 'panel-feedback');
-    tabCommunity.setAttribute('aria-controls', 'panel-community');
-    panelFeedback.setAttribute('aria-labelledby', 'tab-feedback');
-    panelCommunity.setAttribute('aria-labelledby', 'tab-community');
+    // ======== 3) Tab 交互（修复：事件委托 + 明确字符串 aria-selected） ========
+    const tablist = document.querySelector('.tabs');
+    const panels = {
+      feedback: $('#panel-feedback'),
+      community: $('#panel-community'),
+    };
 
     function selectTab(which){
       const isFeedback = which === 'feedback';
-      tabFeedback.setAttribute('aria-selected', isFeedback);
-      tabFeedback.tabIndex = isFeedback ? 0 : -1;
-      tabCommunity.setAttribute('aria-selected', !isFeedback);
-      tabCommunity.tabIndex = !isFeedback ? 0 : -1;
-      panelFeedback.hidden = !isFeedback;
-      panelCommunity.hidden = isFeedback;
+      // 设置 aria
+      $('#tab-feedback').setAttribute('aria-selected', String(isFeedback));
+      $('#tab-feedback').tabIndex = isFeedback ? 0 : -1;
+      $('#tab-community').setAttribute('aria-selected', String(!isFeedback));
+      $('#tab-community').tabIndex = !isFeedback ? 0 : -1;
+      // 显示/隐藏面板
+      panels.feedback.hidden = !isFeedback;
+      panels.community.hidden = isFeedback;
     }
-    tabFeedback.addEventListener('click', ()=>selectTab('feedback'));
-    tabCommunity.addEventListener('click', ()=>selectTab('community'));
 
-    ;[tabFeedback, tabCommunity].forEach((el) => {
-      el.addEventListener('keydown', (e) => {
-        const keys = ['ArrowLeft','ArrowRight','Home','End','Enter',' '];
-        if (!keys.includes(e.key)) return;
-        e.preventDefault();
-        const order = [tabFeedback, tabCommunity];
-        const idx = order.indexOf(document.activeElement);
-        if (e.key === 'ArrowRight') (order[idx + 1] || order[0]).focus();
-        if (e.key === 'ArrowLeft')  (order[idx - 1] || order[order.length - 1]).focus();
-        if (e.key === 'Home') order[0].focus();
-        if (e.key === 'End')  order[order.length - 1].focus();
-        if (e.key === 'Enter' || e.key === ' ') {
-          selectTab(document.activeElement.id === 'tab-feedback' ? 'feedback' : 'community');
-        }
-      });
+    // 事件委托（点击 + 键盘）
+    tablist.addEventListener('click', (e)=>{
+      const t = e.target.closest('.tab');
+      if(!t) return;
+      const which = t.dataset.tab;
+      if(which) selectTab(which);
+    });
+    tablist.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' || e.key === ' '){
+        const t = e.target.closest('.tab');
+        if(!t) return;
+        const which = t.dataset.tab;
+        if(which){ e.preventDefault(); selectTab(which); }
+      }
     });
 
-    // ======== 4) 初始化仓库链接 ========
+    // ======== 4) 初始化仓库/社群信息 ========
     $('#ghLink').href = CONFIG.GH_HOMEPAGE;
     $('#ghLink').textContent = '仓库主页';
+    $('#qq-number').value = CONFIG.QQ_NUMBER || '';
+    $('#wx-id').value = CONFIG.WECHAT_ID || '';
+    $('#btn-qq-join').href = CONFIG.QQ_INVITE_URL || '#';
+
+    function copyTextFrom(selector){
+      const el = $(selector);
+      if(!el) return;
+      el.select?.();
+      navigator.clipboard.writeText(el.value || el.textContent || '')
+        .then(()=> alert('已复制到剪贴板'))
+        .catch(()=> alert('复制失败，请手动复制'));
+    }
+    $$('button[data-copy]').forEach(btn=>{
+      btn.addEventListener('click', ()=> copyTextFrom(btn.getAttribute('data-copy')));
+    });
+
+    $('#btn-qq-url-copy').addEventListener('click', ()=>{
+      if(!CONFIG.QQ_INVITE_URL){ alert('请先在代码中配置 QQ_INVITE_URL'); return; }
+      navigator.clipboard.writeText(CONFIG.QQ_INVITE_URL).then(()=> alert('已复制加群链接'));
+    });
+
+    $('#btn-wx-open').addEventListener('click', ()=>{
+      // 仅在移动端可能生效；桌面端会无动作
+      window.location.href = 'weixin://';
+      if(CONFIG.WECHAT_ID){
+        setTimeout(()=> alert('若未能直接打开，请手动搜索微信号：\n' + CONFIG.WECHAT_ID), 800);
+      }
+    });
 
     // ======== 5) 反馈模板与提交通道 ========
     const titleEl = $('#fb-title');
@@ -221,26 +267,13 @@
     const contactEl = $('#contact');
     const sysinfoEl = $('#sysinfo');
 
-    // A11y: 星级评分（键盘可用）
-    const starGroup = document.getElementById('stars');
-    starGroup.setAttribute('role', 'radiogroup');
     let starsValue = 0;
-    const stars = $$('#stars .star');
-    function renderStars(){
-      stars.forEach((x,i)=>{ const checked = (i+1) <= starsValue; x.setAttribute('aria-checked', checked); x.tabIndex = (i+1) === (starsValue || 1) ? 0 : -1; });
-    }
-    stars.forEach((s,i)=>{
-      s.setAttribute('role','radio');
-      s.addEventListener('click', ()=>{ starsValue=i+1; renderStars(); });
-      s.addEventListener('keydown', (e)=>{
-        const keys=['ArrowLeft','ArrowRight','Home','End','Enter',' '];
-        if(!keys.includes(e.key)) return; e.preventDefault();
-        if(e.key==='ArrowRight') starsValue=Math.min(5,(starsValue||1)+1);
-        if(e.key==='ArrowLeft')  starsValue=Math.max(1,(starsValue||1)-1);
-        if(e.key==='Home') starsValue=1; if(e.key==='End') starsValue=5; renderStars();
+    $$('#stars .star').forEach(s=>{
+      s.addEventListener('click', ()=>{
+        starsValue = Number(s.dataset.v);
+        $$('#stars .star').forEach(x=> x.setAttribute('aria-checked', String(Number(x.dataset.v) <= starsValue)));
       });
     });
-    renderStars();
 
     function getSystemInfo(){
       return [
@@ -248,8 +281,7 @@
         `平台: ${navigator.platform}`,
         `语言: ${navigator.language}`,
         `屏幕: ${window.screen.width}x${window.screen.height} @${window.devicePixelRatio}`
-      ].join('
-');
+      ].join('\n');
     }
 
     function buildMarkdown(){
@@ -257,103 +289,63 @@
       const t = titleEl.value.trim() || '(待补充标题)';
       lines.push(`### 描述`);
       lines.push(contentEl.value.trim() || '(详细描述/复现步骤/期望行为...)');
-      lines.push('
-### 类型');
+      lines.push('\n### 类型');
       lines.push(typeEl.value);
-      lines.push('
-### 评分');
+      lines.push('\n### 评分');
       lines.push(starsValue ? `${'★'.repeat(starsValue)} (${starsValue}/5)` : '未评分');
-      lines.push('
-### 联系方式');
+      lines.push('\n### 联系方式');
       lines.push(contactEl.value.trim() || '未提供');
       if(sysinfoEl.checked){
-        lines.push('
-### 系统信息');
+        lines.push('\n### 系统信息');
         lines.push('```');
         lines.push(getSystemInfo());
         lines.push('```');
       }
-      return { title: t, body: lines.join('
-') };
+      return { title: t, body: lines.join('\n') };
     }
 
     function buildIssueURL(){
-      if(!CONFIG.GH_OWNER || !CONFIG.GH_REPO){ alert('请在代码中配置 GH_OWNER/GH_REPO'); return '#'; }
+      if(!CONFIG.GH_OWNER || !CONFIG.GH_REPO){
+        alert('请在代码中配置 GH_OWNER/GH_REPO');
+        return '#';
+      }
       const { title, body } = buildMarkdown();
       const base = `https://github.com/${CONFIG.GH_OWNER}/${CONFIG.GH_REPO}/issues/new`;
-      const params = new URLSearchParams({ title, body, labels: 'feedback' });
-      return `${base}?${params.toString()}`;
+      const url = `${base}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+      return url;
     }
 
     function buildMailto(){
-      if(!CONFIG.MAIL_TO){ alert('请在代码中配置 MAIL_TO'); return '#'; }
-      const { title, body } = buildMarkdown();
-      const maxBody = 1800; let mailBody = body.replace(/
-/g,'
-');
-      if (encodeURIComponent(mailBody).length > maxBody) {
-        mailBody = mailBody.slice(0, 1200) + '
-
-(内容过长已截断，请在页面点击“复制模板”获取完整内容)';
+      if(!CONFIG.MAIL_TO){
+        alert('请在代码中配置 MAIL_TO');
+        return '#';
       }
-      return `mailto:${CONFIG.MAIL_TO}?subject=${encodeURIComponent('[反馈] ' + title)}&body=${encodeURIComponent(mailBody)}`;
+      const { title, body } = buildMarkdown();
+      const url = `mailto:${CONFIG.MAIL_TO}?subject=${encodeURIComponent('[反馈] ' + title)}&body=${encodeURIComponent(body)}`;
+      return url;
     }
 
-    $('#btn-issue').addEventListener('click', (e)=>{ e.currentTarget.href = buildIssueURL(); });
-    $('#btn-mail').addEventListener('click', (e)=>{ const url = buildMailto(); e.currentTarget.href = url; window.location.href = url; });
-    $('#btn-copy-template').addEventListener('click', ()=>{ const { title, body } = buildMarkdown(); const all = `# ${title}
+    $('#btn-issue').addEventListener('click', (e)=>{
+      const url = buildIssueURL();
+      e.currentTarget.href = url;
+    });
 
-${body}`; copyText(all); });
+    $('#btn-mail').addEventListener('click', (e)=>{
+      const url = buildMailto();
+      e.currentTarget.href = url;
+      window.location.href = url;
+    });
 
-    // URL 预填
-    const p = new URLSearchParams(location.search);
-    if (p.get('title'))  titleEl.value   = p.get('title');
-    if (p.get('type'))   typeEl.value    = p.get('type');
-    if (p.get('contact'))contactEl.value = p.get('contact');
-    if (p.get('tab') === 'community') selectTab('community');
+    $('#btn-copy-template').addEventListener('click', ()=>{
+      const { title, body } = buildMarkdown();
+      const all = `# ${title}\n\n${body}`;
+      navigator.clipboard.writeText(all).then(()=> alert('已复制反馈模板，粘贴到任意渠道即可')).catch(()=> alert('复制失败'));
+    });
 
-    // ======== 6) 渲染 QQ 群列表 ========
-    function renderQQ(){
-      const box = document.getElementById('qq-container');
-      box.innerHTML = '';
-      CONFIG.QQ_LIST.forEach((q)=>{
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <div class="kvs" style="margin-bottom:8px;">
-            <input class="mono" type="text" value="${q.id}" readonly />
-            <button class="btn-copy-id">复制群号</button>
-          </div>
-          <div class="btns" style="margin-top:6px;">
-            <a class="btn success ${q.full ? 'disabled' : ''} btn-join" ${q.full ? '' : 'target="_blank" rel="noopener noreferrer"'}>${q.full ? '加群已满' : '一键加群'}</a>
-            <button class="btn btn-copy-url">复制加群链接</button>
-          </div>
-          <p class="muted" style="margin-top:8px;">${q.name}</p>
-        `;
-        box.appendChild(card);
-        const join = card.querySelector('.btn-join');
-        if (!q.full) join.href = q.invite;
-        else join.addEventListener('click', (e)=> e.preventDefault());
-        card.querySelector('.btn-copy-id').addEventListener('click', ()=> copyText(q.id));
-        card.querySelector('.btn-copy-url').addEventListener('click', ()=> copyText(q.invite));
-      });
-    }
-    renderQQ();
-
-    // ======== 7) （可选）从 stats.json 加载群人数 ========
-    async function loadGroupStats(){
-      try{
-        const res = await fetch('stats.json', { cache: 'no-store' });
-        if(!res.ok) return; const data = await res.json();
-        const head = document.querySelector('#panel-community h3');
-        if (data.qq?.memberCount != null) {
-          const el = document.createElement('div'); el.className='muted';
-          el.textContent = `当前人数：${data.qq.memberCount}/${data.qq.capacity ?? '—'}（更新于 ${new Date(data.qq.updatedAt).toLocaleString()}）`;
-          head.after(el);
-        }
-      }catch(_){}
-    }
-    loadGroupStats();
+    // ======== 6) 启动：默认显示“加入交流群”，支持 ?tab=community/feedback ========
+    const params = new URLSearchParams(location.search);
+    const initTab = params.get('tab') === 'feedback' ? 'feedback' : 'community';
+    selectTab(initTab);
   </script>
 </body>
 </html>
