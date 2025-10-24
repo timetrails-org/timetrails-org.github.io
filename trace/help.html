@@ -65,6 +65,17 @@
     .qr-preview img{ width:320px; height:320px; border-radius:12px; object-fit:contain; display:block; }
     .qr-preview .close{ margin-top:10px; width:100%; }
 
+    /* 引导弹窗 */
+    dialog.wx-guide{ border:none; padding:0; background:transparent; }
+    .wx-guide .inner{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow); max-width:420px; }
+    .wx-guide h3{ margin:0 0 8px; font-size:16px; }
+    .wx-guide p{ margin:8px 0; color:var(--muted); font-size:14px; }
+    .wx-guide .row{ grid-template-columns:1fr auto; }
+    .wx-guide .qr-wrap{ display:flex; justify-content:center; padding:10px; border:1px dashed var(--border); border-radius:12px; }
+    .wx-guide canvas{ width:220px; height:220px; }
+    .wx-guide .actions{ display:flex; gap:10px; margin-top:10px; }
+    .wx-guide .actions .btn{ flex:1; justify-content:center; }
+
     @media (max-width:640px){ .row{ grid-template-columns:1fr; } .tabs{ position:static; } }
     @media (max-width:480px){ .qr-img{ width:150px; height:150px; } .qr-preview img{ width:260px; height:260px; } }
   </style>
@@ -173,9 +184,29 @@
 
   <!-- jsQR：用于离线识别二维码（可改为自托管到 assets/） -->
   <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+  <!-- 轻量二维码生成（fallback 弹窗内展示） -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+  <!-- 引导弹窗（复制链接 + 二维码） -->
+  <dialog class="wx-guide" id="wx-guide">
+    <div class="inner">
+      <h3>在微信中打开</h3>
+      <p>1）已将链接复制到剪贴板；现在请切换到 <b>微信</b> 粘贴并发送给「文件传输助手」，在微信里点击即可打开。<br>
+         2）或者直接使用微信 <b>扫一扫</b> 扫描下方二维码。</p>
+      <div class="row">
+        <input id="wx-guide-link" class="mono" type="text" readonly />
+        <button class="btn" id="wx-guide-copy">重新复制</button>
+      </div>
+      <div class="qr-wrap"><canvas id="wx-guide-qr" width="512" height="512"></canvas></div>
+      <div class="actions">
+        <button class="btn" id="wx-guide-close">关闭</button>
+        <button class="btn success" id="wx-guide-open-wechat">再次尝试拉起微信</button>
+      </div>
+    </div>
+  </dialog>
 
   <script>
-    // ======== 配置（GitHub Pages + 本地 assets） ========
+    // ======== 配置（GitHub Pages + 本地 / 外链） ========
     const CONFIG = {
       GH_OWNER: "timetrails-org",
       GH_REPO:  "timetrails-org.github.io",
@@ -187,10 +218,13 @@
       QQ2_INVITE_URL: "https://qm.qq.com/q/J1eYFA7i4m",
       QQ2_IS_FULL: true,
 
-      // 微信企业客服：本地 assets 路径；若知道直链可填 WX_CHAT_URL（优先使用）
+      // 微信二维码图片（可用你自己的 assets 相对路径或外链）
       WX_QR_URL: "http://www.timetrails.sxxw.site/assets/qywx.png",
       WX_QR_HINT: "工作日 10:00-19:00 在线",
-      WX_CHAT_URL: "", // 例如：weixin://dl/business/?t=XXXXXXXX；留空则自动从二维码识别
+      // 想要在微信内最终打开的网页（你的需求）
+      WX_TARGET_URL: "http://www.timetrails.sxxw.site/trace/help?tab=community",
+      // 若你有企业微信/个人名片等可直接拉起的 weixin:// 直链，可填此项（优先使用）
+      WX_CHAT_URL: "",
 
       IOS_APP_ID: "1634761411",
       IOS_APP_COUNTRY: "cn",
@@ -200,6 +234,7 @@
     // ======== 工具 ========
     const $ = (sel, root=document)=>root.querySelector(sel);
     const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
+    function copyText(text){ return navigator.clipboard.writeText(text); }
     function copyTextFrom(selector){
       const el = $(selector); if(!el) return;
       el.select?.();
@@ -216,6 +251,7 @@
       const ua = navigator.userAgent || navigator.vendor || window.opera || "";
       return /iPad|iPhone|iPod/.test(ua) || (navigator.platform && /iP(hone|od|ad)/.test(navigator.platform));
     }
+    const isWeChatUA = /MicroMessenger/i.test(navigator.userAgent || "");
 
     // ======== Tabs ========
     const tablist = document.querySelector('.tabs[role="tablist"]');
@@ -258,28 +294,79 @@
     else{ join2.href = CONFIG.QQ2_INVITE_URL || '#'; }
     $('#btn-qq2-url-copy').addEventListener('click',()=>{ if(!CONFIG.QQ2_INVITE_URL){ alert('请先配置 QQ2_INVITE_URL'); return; } navigator.clipboard.writeText(CONFIG.QQ2_INVITE_URL).then(()=>alert('已复制加群链接')); });
 
+    // ======== 尝试在微信内打开指定 URL 的工具 ========
+    async function openWeChatWithUrl(target, { preferDirectInWeChat=true } = {}){
+      const guide = $('#wx-guide');
+      const linkInput = $('#wx-guide-link');
+      const btnCopy = $('#wx-guide-copy');
+      const qrCanvas = $('#wx-guide-qr');
+      const btnAgain = $('#wx-guide-open-wechat');
+      const btnClose = $('#wx-guide-close');
+
+      // 如果当前就在微信内置浏览器，直接跳转到目标地址
+      if (preferDirectInWeChat && isWeChatUA) {
+        window.location.href = target;
+        return;
+      }
+
+      // 先把链接复制到剪贴板，方便用户在微信里粘贴
+      try { await copyText(target); } catch {}
+
+      // 尝试拉起微信（各平台的 best-effort）
+      const trySchemes = () => {
+        // 直接 scheme
+        window.location.href = 'weixin://';
+        // Android intent 方案（有些浏览器支持）
+        setTimeout(()=>{ window.location.href = 'intent://weixin.qq.com/#Intent;scheme=weixin;package=com.tencent.mm;end'; }, 100);
+      };
+      // 设置一个兜底：若 1500ms 内没有离开当前页，则给出引导弹窗
+      const t = Date.now();
+      trySchemes();
+      setTimeout(()=>{
+        // 仍在当前页视为失败，展示引导弹窗（复制 + 扫码）
+        if (document.visibilityState === 'visible' && Date.now() - t < 3000) {
+          if (linkInput) linkInput.value = target;
+          if (btnCopy) btnCopy.onclick = ()=> copyText(target).then(()=>alert('已复制链接')).catch(()=>alert('复制失败，请手动复制'));
+          if (qrCanvas) { QRCode.toCanvas(qrCanvas, target, { width: 512, margin: 2 }, ()=>{}); }
+          if (btnAgain) btnAgain.onclick = ()=> trySchemes();
+          if (btnClose) btnClose.onclick = ()=> guide.close();
+          try { guide.showModal(); } catch { /* older browsers */ }
+        }
+      }, 1500);
+    }
+
     // ======== 微信企业客服（二维码 + 识别 + 跳转） ========
     (function initWxKF(){
       const card=$('#wxkf-card'), img=$('#wx-qr-img'), link=$('#wx-qr-link'), bigImg=$('#wx-qr-big'), hint=$('#wx-qr-hint');
       const dlg=$('#wx-qr-dialog'), btnPreview=$('#wx-qr-preview-btn'), btnDownload=$('#wx-qr-download'), btnCopyLink=$('#wx-qr-copy-link'), btnOpenWX=$('#wx-qr-open-wx'), btnClose=$('#wx-qr-close');
 
-      const qrUrl=(CONFIG.WX_QR_URL||'').trim(); let wxLink=(CONFIG.WX_CHAT_URL||'').trim();
-      if(!qrUrl){ card?.remove(); dlg?.remove(); return; }
+      const qrUrl=(CONFIG.WX_QR_URL||'').trim();
+      let wxLink=(CONFIG.WX_CHAT_URL||'').trim(); // 若二维码里能识别出 weixin:// 会覆盖它
+      const targetUrl=(CONFIG.WX_TARGET_URL||'').trim();
 
+      if(!qrUrl){ card?.remove(); dlg?.remove(); return; }
       img.src=qrUrl; if(bigImg) bigImg.src=qrUrl; hint.textContent=CONFIG.WX_QR_HINT||'工作日在线';
       btnDownload.href=qrUrl; btnCopyLink.addEventListener('click',()=>navigator.clipboard.writeText(qrUrl).then(()=>alert('已复制二维码链接')));
 
-      function tryOpenWeChat(url){ if(!url) return; window.location.href=url; } // 手机端可靠，桌面端可能无响应
-      function refreshOpenHandlers(){
-        if(wxLink){ link.href=wxLink; link.title='点击打开微信企业客服'; btnOpenWX.classList.remove('disabled'); btnOpenWX.onclick=()=>tryOpenWeChat(wxLink); }
-        else{ link.removeAttribute('href'); btnOpenWX.classList.add('disabled'); btnOpenWX.onclick=null; }
+      // 点击二维码/按钮：你的需求 —— “拉起微信并打开 targetUrl”
+      function handleOpen(){
+        // 若在微信内：直接打开目标地址
+        if (isWeChatUA) { window.location.href = targetUrl; return; }
+        // 否则尽力拉起微信，辅以复制与扫码引导
+        openWeChatWithUrl(targetUrl);
       }
-      refreshOpenHandlers();
 
+      // 链接与按钮都绑定此行为
+      link.removeAttribute('href');
+      link.title = '点击尝试用微信打开指定页面';
+      link.addEventListener('click', (e)=>{ e.preventDefault(); handleOpen(); });
+      btnOpenWX.addEventListener('click', (e)=>{ e.preventDefault(); handleOpen(); });
+
+      // 放大预览
       btnPreview.addEventListener('click',()=>{ if(typeof dlg?.showModal==='function'){ dlg.showModal(); } else { window.open(qrUrl,'_blank','noopener'); }});
       btnClose?.addEventListener('click',()=>dlg.close());
 
-      // 自动识别（仅当未配置 WX_CHAT_URL）
+      // 自动识别二维码（若你后来想把二维码换成企业客服 weixin:// 码，可复用这段；本需求用不上也不冲突）
       if(!wxLink && window.jsQR){
         const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d',{willReadFrequently:true});
         function decode(){
@@ -290,11 +377,11 @@
           if(res && res.data){
             const val=res.data.trim();
             if(/^weixin:\/\//i.test(val) || /^wxp:\/\//i.test(val) || /^https?:\/\//i.test(val)){
-              wxLink=val; refreshOpenHandlers(); console.log('QR decoded:', val);
+              wxLink=val; console.log('QR decoded:', val);
             }
-          } else { console.warn('未从图片中识别到二维码或清晰度不足。'); }
+          }
         }
-        if(img.complete) decode(); else { img.onload=decode; img.onerror=()=>console.warn('二维码图片加载失败，无法识别。'); }
+        if(img.complete) decode(); else { img.onload=decode; }
       }
 
       // 点击小图也可放大
