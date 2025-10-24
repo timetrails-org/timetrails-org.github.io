@@ -7,77 +7,66 @@
   <meta name="color-scheme" content="light dark" />
   <style>
     :root{
-      --bg: #0b0c0f;
-      --panel: #11131a;
-      --card: #151823;
-      --text: #e6e6eb;
-      --muted:#9aa0aa;
-      --brand:#6aa4ff;
-      --ok:#2ecc71;
-      --warn:#f39c12;
-      --danger:#e74c3c;
-      --border: #232737;
-      --shadow: 0 8px 24px rgba(0,0,0,.35);
+      --bg:#0b0c0f; --panel:#11131a; --card:#151823; --text:#e6e6eb; --muted:#9aa0aa;
+      --brand:#6aa4ff; --ok:#2ecc71; --warn:#f39c12; --danger:#e74c3c; --border:#232737;
+      --shadow:0 8px 24px rgba(0,0,0,.35);
     }
     @media (prefers-color-scheme: light){
-      :root{ --bg:#f6f7fb; --panel:#ffffff; --card:#ffffff; --text:#11131a; --muted:#6b7280; --border:#e5e7eb; --shadow:0 10px 30px rgba(17,24,39,.06); }
+      :root{ --bg:#f6f7fb; --panel:#fff; --card:#fff; --text:#11131a; --muted:#6b7280; --border:#e5e7eb; --shadow:0 10px 30px rgba(17,24,39,.06); }
     }
     *{ box-sizing:border-box; }
-    body{ margin:0; font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji"; background:var(--bg); color:var(--text); }
+    body{ margin:0; font-family: ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji"; background:var(--bg); color:var(--text); }
     .wrap{ max-width:960px; margin:32px auto; padding:0 16px; }
     header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
     .brand{ display:flex; align-items:center; gap:12px; }
-    .logo{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg, var(--brand), #9d7dff); box-shadow: var(--shadow); }
+    .logo{ width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--brand),#9d7dff); box-shadow:var(--shadow); }
     h1{ font-size:20px; margin:0; }
 
-    .tabs{ display:flex; gap:8px; background:var(--panel); border:1px solid var(--border); padding:6px; border-radius:14px; box-shadow: var(--shadow); position:sticky; top:8px; z-index:5; }
+    .tabs{ display:flex; gap:8px; background:var(--panel); border:1px solid var(--border); padding:6px; border-radius:14px; box-shadow:var(--shadow); position:sticky; top:8px; z-index:5; }
     .tab{ flex:1; text-align:center; padding:10px 12px; border-radius:10px; cursor:pointer; user-select:none; border:1px solid transparent; }
     .tab[aria-selected="true"]{ background:var(--card); border-color:var(--border); }
     .tab:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
 
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; margin-top:16px; box-shadow: var(--shadow); }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; margin-top:16px; box-shadow:var(--shadow); }
     .row{ display:grid; grid-template-columns:150px 1fr; gap:12px; align-items:center; margin:12px 0; }
     .row textarea{ min-height:120px; }
     label{ color:var(--muted); font-size:14px; }
-    input[type="text"], input[type="email"], select, textarea{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:transparent; color:var(--text); }
+    input[type="text"],input[type="email"],select,textarea{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:transparent; color:var(--text); }
     textarea{ resize:vertical; }
 
     .btns{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
-    button, .btn{ border:1px solid var(--border); background:var(--panel); color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer; box-shadow: var(--shadow); text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
-    button.primary, .btn.primary{ background:linear-gradient(135deg, var(--brand), #9d7dff); border:none; color:white; }
-    .btn.success{ background:linear-gradient(135deg, #2ecc71, #27ae60); border:none; color:white; }
-    .btn.warn{ background:linear-gradient(135deg, #f39c12, #e67e22); border:none; color:white; }
+    button,.btn{ border:1px solid var(--border); background:var(--panel); color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer; box-shadow:var(--shadow); text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+    button.primary,.btn.primary{ background:linear-gradient(135deg,var(--brand),#9d7dff); border:none; color:#fff; }
+    .btn.success{ background:linear-gradient(135deg,#2ecc71,#27ae60); border:none; color:#fff; }
+    .btn.warn{ background:linear-gradient(135deg,#f39c12,#e67e22); border:none; color:#fff; }
     .btn.disabled{ opacity:.55; cursor:not-allowed; pointer-events:none; }
 
     .muted{ color:var(--muted); font-size:13px; }
-    .grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:16px; }
+    .grid{ display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
     .kvs{ display:grid; grid-template-columns: 1fr auto; gap:8px; }
-    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .mono{ font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
 
     .stars{ display:flex; gap:6px; }
     .star{ width:28px; height:28px; border-radius:50%; display:grid; place-items:center; border:1px solid var(--border); cursor:pointer; }
     .star[aria-checked="true"]{ background:gold; color:#111; }
 
     .badge{ display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border); }
-    .badge.full{ background:linear-gradient(135deg, var(--warn), #e67e22); color:white; border:none; }
+    .badge.full{ background:linear-gradient(135deg,var(--warn),#e67e22); color:#fff; border:none; }
 
     footer{ margin:22px 4px; text-align:center; color:var(--muted); font-size:12px; }
 
-    /* ==== 微信企业客服二维码 样式 ==== */
+    /* 微信企业客服 */
     .qr-box{ display:flex; align-items:flex-start; gap:16px; }
-    .qr-img{ width:180px; height:180px; border-radius:12px; border:1px solid var(--border); background:var(--panel); box-shadow: var(--shadow); object-fit:cover; cursor:zoom-in; }
+    .qr-img{ width:180px; height:180px; border-radius:12px; border:1px solid var(--border); background:var(--panel); box-shadow:var(--shadow); object-fit:cover; cursor:zoom-in; }
     .qr-actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
     .qr-meta{ color:var(--muted); font-size:13px; }
     dialog.qr-preview{ border:none; border-radius:16px; padding:0; background:transparent; }
-    .qr-preview .inner{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow: var(--shadow); }
+    .qr-preview .inner{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow); }
     .qr-preview img{ width:320px; height:320px; border-radius:12px; object-fit:contain; display:block; }
     .qr-preview .close{ margin-top:10px; width:100%; }
 
     @media (max-width:640px){ .row{ grid-template-columns:1fr; } .tabs{ position:static; } }
-    @media (max-width:480px){
-      .qr-img{ width:150px; height:150px; }
-      .qr-preview img{ width:260px; height:260px; }
-    }
+    @media (max-width:480px){ .qr-img{ width:150px; height:150px; } .qr-preview img{ width:260px; height:260px; } }
   </style>
 </head>
 <body>
@@ -85,65 +74,34 @@
     <header>
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
-        <div>
-          <h1>意见反馈 / 加入社群 / 去商店评价</h1>
-        </div>
+        <div><h1>意见反馈 / 加入社群 / 去商店评价</h1></div>
       </div>
       <a class="btn" id="ghLink" target="_blank" rel="noopener">仓库主页</a>
     </header>
 
     <nav class="tabs" role="tablist" aria-label="主选项卡">
-      <div class="tab" role="tab" id="tab-appstore"
-           aria-controls="panel-appstore" aria-selected="false" tabindex="-1"
-           data-tab="appstore">去商店评价</div>
-      <div class="tab" role="tab" id="tab-feedback"
-           aria-controls="panel-feedback" aria-selected="true" tabindex="0"
-           data-tab="feedback">提交反馈</div>
-      <div class="tab" role="tab" id="tab-community"
-           aria-controls="panel-community" aria-selected="false" tabindex="-1"
-           data-tab="community">加入交流群</div>
+      <div class="tab" role="tab" id="tab-appstore"  aria-controls="panel-appstore"  aria-selected="false" tabindex="-1" data-tab="appstore">去商店评价</div>
+      <div class="tab" role="tab" id="tab-feedback"  aria-controls="panel-feedback"  aria-selected="true"  tabindex="0"  data-tab="feedback">提交反馈</div>
+      <div class="tab" role="tab" id="tab-community" aria-controls="panel-community" aria-selected="false" tabindex="-1" data-tab="community">加入交流群</div>
     </nav>
 
     <!-- 提交反馈 -->
     <section class="card" id="panel-feedback" role="tabpanel" aria-labelledby="tab-feedback" aria-hidden="false">
-      <div class="row">
-        <label for="fb-title">标题</label>
-        <input id="fb-title" type="text" placeholder="简要描述你的问题或建议" />
-      </div>
-      <div class="row">
-        <label for="fb-type">类型</label>
-        <select id="fb-type">
-          <option value="bug">缺陷/报错</option>
-          <option value="feature">功能建议</option>
-          <option value="uiux">交互/体验</option>
-          <option value="other">其他</option>
-        </select>
-      </div>
-      <div class="row">
-        <label for="fb-content">详细描述</label>
-        <textarea id="fb-content" placeholder="复现步骤 / 期望行为 / 实际结果 / 截图链接 …"></textarea>
-      </div>
+      <div class="row"><label for="fb-title">标题</label><input id="fb-title" type="text" placeholder="简要描述你的问题或建议" /></div>
+      <div class="row"><label for="fb-type">类型</label><select id="fb-type">
+        <option value="bug">缺陷/报错</option><option value="feature">功能建议</option>
+        <option value="uiux">交互/体验</option><option value="other">其他</option></select></div>
+      <div class="row"><label for="fb-content">详细描述</label><textarea id="fb-content" placeholder="复现步骤 / 期望行为 / 实际结果 / 截图链接 …"></textarea></div>
       <div class="row">
         <label>体验评分</label>
         <div class="stars" id="stars" aria-label="评分 1-5 星">
-          <div class="star" role="radio" data-v="1">1</div>
-          <div class="star" role="radio" data-v="2">2</div>
-          <div class="star" role="radio" data-v="3">3</div>
-          <div class="star" role="radio" data-v="4">4</div>
+          <div class="star" role="radio" data-v="1">1</div><div class="star" role="radio" data-v="2">2</div>
+          <div class="star" role="radio" data-v="3">3</div><div class="star" role="radio" data-v="4">4</div>
           <div class="star" role="radio" data-v="5">5</div>
         </div>
       </div>
-      <div class="row">
-        <label for="contact">可选联系方式</label>
-        <input id="contact" type="text" placeholder="邮箱 / QQ" />
-      </div>
-      <div class="row">
-        <label></label>
-        <div>
-          <label class="muted"><input id="sysinfo" type="checkbox" checked /> 附带浏览器与系统信息（便于排查）</label>
-        </div>
-      </div>
-
+      <div class="row"><label for="contact">可选联系方式</label><input id="contact" type="text" placeholder="邮箱 / QQ" /></div>
+      <div class="row"><label></label><div><label class="muted"><input id="sysinfo" type="checkbox" checked /> 附带浏览器与系统信息（便于排查）</label></div></div>
       <div class="btns">
         <a class="btn primary" id="btn-issue" target="_blank" rel="noopener">通过 GitHub Issue 提交</a>
         <a class="btn" id="btn-mail">通过邮件提交</a>
@@ -152,49 +110,37 @@
       <p class="muted">提示：若 GitHub 需要登录，你也可以切到“去商店评价”或通过邮件反馈。</p>
     </section>
 
-    <!-- 加入交流群（QQ） -->
+    <!-- 加入交流群（QQ + 微信客服） -->
     <section class="card" id="panel-community" role="tabpanel" aria-labelledby="tab-community" hidden aria-hidden="true">
       <div class="grid">
-        <!-- 群 1 -->
         <div>
           <h3>QQ 群 1</h3>
-          <div class="kvs">
-            <input id="qq1-number" class="mono" type="text" readonly />
-            <button data-copy="#qq1-number">复制群号</button>
-          </div>
-          <div class="btns" style="margin-top:10px;">
-            <a class="btn success" id="btn-qq1-join" target="_blank" rel="noopener">一键加群</a>
-            <a class="btn" id="btn-qq1-url-copy">复制加群链接</a>
-          </div>
+          <div class="kvs"><input id="qq1-number" class="mono" type="text" readonly /><button data-copy="#qq1-number">复制群号</button></div>
+          <div class="btns" style="margin-top:10px;"><a class="btn success" id="btn-qq1-join" target="_blank" rel="noopener">一键加群</a><a class="btn" id="btn-qq1-url-copy">复制加群链接</a></div>
         </div>
-
-        <!-- 群 2（已满） -->
         <div>
           <h3>QQ 群 2 <span class="badge full">已满</span></h3>
-          <div class="kvs">
-            <input id="qq2-number" class="mono" type="text" readonly />
-            <button data-copy="#qq2-number">复制群号</button>
-          </div>
-          <div class="btns" style="margin-top:10px;">
-            <a class="btn success disabled" id="btn-qq2-join" aria-disabled="true" tabindex="-1">一键加群（已满）</a>
-            <a class="btn" id="btn-qq2-url-copy">复制加群链接</a>
-          </div>
+          <div class="kvs"><input id="qq2-number" class="mono" type="text" readonly /><button data-copy="#qq2-number">复制群号</button></div>
+          <div class="btns" style="margin-top:10px;"><a class="btn success disabled" id="btn-qq2-join" aria-disabled="true" tabindex="-1">一键加群（已满）</a><a class="btn" id="btn-qq2-url-copy">复制加群链接</a></div>
         </div>
       </div>
 
-      <!-- 微信企业客服（二维码） -->
+      <!-- 微信企业客服（二维码 + 识别 + 跳转） -->
       <div class="card" id="wxkf-card" style="margin-top:16px;">
         <h3>微信企业客服</h3>
         <div class="qr-box">
-          <img id="wx-qr-img" class="qr-img" alt="微信企业客服二维码" loading="lazy" decoding="async" />
+          <a id="wx-qr-link" target="_blank" rel="noopener">
+            <img id="wx-qr-img" class="qr-img" alt="微信企业客服二维码" loading="lazy" decoding="async" />
+          </a>
           <div>
             <p id="wx-qr-hint" class="qr-meta"></p>
             <div class="qr-actions">
               <button class="primary" id="wx-qr-preview-btn">放大查看</button>
               <a class="btn" id="wx-qr-download" download="wx-kefu.png">下载二维码</a>
               <a class="btn" id="wx-qr-copy-link">复制二维码链接</a>
+              <a class="btn success" id="wx-qr-open-wx">直接打开微信</a>
             </div>
-            <p class="muted" style="margin-top:8px;">提示：手机端可长按识别；若无法识别，请保存图片后在微信中从相册识别。</p>
+            <p class="muted" style="margin-top:8px;">提示：点击二维码或按钮尝试打开微信；手机端可长按识别。</p>
           </div>
         </div>
       </div>
@@ -208,7 +154,7 @@
       </dialog>
     </section>
 
-    <!-- 去商店评价（一级 Tab） -->
+    <!-- 去商店评价 -->
     <section class="card" id="panel-appstore" role="tabpanel" aria-labelledby="tab-appstore" hidden aria-hidden="true">
       <div class="row">
         <label>App Store</label>
@@ -222,13 +168,14 @@
       </div>
     </section>
 
-    <footer>
-      本页为静态页面，不收集任何敏感数据。提交内容将跳转到你配置的 Issue/邮箱处理。
-    </footer>
+    <footer>本页为静态页面，不收集任何敏感数据。提交内容将跳转到你配置的 Issue/邮箱处理。</footer>
   </div>
 
+  <!-- jsQR：用于离线识别二维码（可改为自托管到 assets/） -->
+  <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+
   <script>
-    // ======== 配置 ========
+    // ======== 配置（GitHub Pages + 本地 assets） ========
     const CONFIG = {
       GH_OWNER: "timetrails-org",
       GH_REPO:  "timetrails-org.github.io",
@@ -240,271 +187,149 @@
       QQ2_INVITE_URL: "https://qm.qq.com/q/J1eYFA7i4m",
       QQ2_IS_FULL: true,
 
-      // ==== 新增：微信企业客服二维码 ====
-      WX_QR_URL: "http://www.timetrails.sxxw.site/assets/qywx.png", // 替换为你的二维码图片 URL
-      WX_QR_HINT: "工作日 10:00-19:00 在线",                    // 可选提示
+      // 微信企业客服：本地 assets 路径；若知道直链可填 WX_CHAT_URL（优先使用）
+      WX_QR_URL: "http://www.timetrails.sxxw.site/assets/qywx.png",
+      WX_QR_HINT: "工作日 10:00-19:00 在线",
+      WX_CHAT_URL: "", // 例如：weixin://dl/business/?t=XXXXXXXX；留空则自动从二维码识别
 
       IOS_APP_ID: "1634761411",
       IOS_APP_COUNTRY: "cn",
-
       GH_HOMEPAGE: "https://github.com/timetrails-org/timetrails-org.github.io"
     };
 
     // ======== 工具 ========
-    const $ = (sel, root=document) => root.querySelector(sel);
-    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-
+    const $ = (sel, root=document)=>root.querySelector(sel);
+    const $$ = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
     function copyTextFrom(selector){
-      const el = $(selector);
-      if(!el) return;
+      const el = $(selector); if(!el) return;
       el.select?.();
       navigator.clipboard.writeText(el.value || el.textContent || '')
-        .then(()=> alert('已复制到剪贴板'))
-        .catch(()=> alert('复制失败，请手动复制'));
+        .then(()=>alert('已复制到剪贴板')).catch(()=>alert('复制失败，请手动复制'));
     }
-
     function getAppStoreURLs(appId, country="cn"){
       if(!appId) return { review:{web:"#",ios:"#"}, detail:{web:"#",ios:"#"} };
       const webDetail = `https://apps.apple.com/${encodeURIComponent(country)}/app/id${encodeURIComponent(appId)}`;
       const iosDetail = `itms-apps://itunes.apple.com/app/id${encodeURIComponent(appId)}`;
-      const webReview = `${webDetail}?action=write-review`;
-      const iosReview = `${iosDetail}?action=write-review`;
-      return { review:{ web:webReview, ios:iosReview }, detail:{ web:webDetail, ios:iosDetail } };
+      return { review:{ web:`${webDetail}?action=write-review`, ios:`${iosDetail}?action=write-review` }, detail:{ web:webDetail, ios:iosDetail } };
     }
     function isIOSDevice(){
       const ua = navigator.userAgent || navigator.vendor || window.opera || "";
       return /iPad|iPhone|iPod/.test(ua) || (navigator.platform && /iP(hone|od|ad)/.test(navigator.platform));
     }
 
-    // ======== Tabs（无障碍 + 键盘 + URL 同步；默认 appstore） ========
+    // ======== Tabs ========
     const tablist = document.querySelector('.tabs[role="tablist"]');
     const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
-    const panels = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')));
-
-    function setSelected(index, { focus = false } = {}) {
-      tabs.forEach((t, i) => {
-        const selected = i === index;
-        t.setAttribute('aria-selected', String(selected));
-        t.tabIndex = selected ? 0 : -1;
+    const panels = tabs.map(t=>document.getElementById(t.getAttribute('aria-controls')));
+    function setSelected(index,{focus=false}={}){
+      tabs.forEach((t,i)=>{
+        const selected = i===index;
+        t.setAttribute('aria-selected',String(selected));
+        t.tabIndex = selected?0:-1;
         panels[i].hidden = !selected;
-        panels[i].setAttribute('aria-hidden', String(!selected));
+        panels[i].setAttribute('aria-hidden',String(!selected));
       });
-      if (focus) tabs[index].focus();
+      if(focus) tabs[index].focus();
       const key = tabs[index].dataset.tab;
-      try{
-        const url = new URL(location.href);
-        url.searchParams.set('tab', key);
-        history.replaceState(null, '', url.toString());
-      }catch{}
+      try{ const url=new URL(location.href); url.searchParams.set('tab',key); history.replaceState(null,'',url.toString()); }catch{}
     }
-    function selectByKey(key, opts){ const idx = tabs.findIndex(t => t.dataset.tab === key); setSelected(idx >= 0 ? idx : 0, opts); }
-
-    tabs.forEach((t, i) => t.addEventListener('click', () => setSelected(i, { focus:true })));
-    tablist.addEventListener('keydown', (e) => {
-      const current = tabs.findIndex(t => t === document.activeElement);
-      if (current < 0) return;
-      let next = null;
-      switch (e.key) {
-        case 'ArrowRight': next = (current + 1) % tabs.length; break;
-        case 'ArrowLeft':  next = (current - 1 + tabs.length) % tabs.length; break;
-        case 'Home':       next = 0; break;
-        case 'End':        next = tabs.length - 1; break;
-        case 'Enter':
-        case ' ':
-          setSelected(current, { focus:true });
-          e.preventDefault();
-          return;
-        default: return;
-      }
-      tabs[next].focus();
-      e.preventDefault();
+    function selectByKey(key,opts){ const idx=tabs.findIndex(t=>t.dataset.tab===key); setSelected(idx>=0?idx:0,opts); }
+    tabs.forEach((t,i)=>t.addEventListener('click',()=>setSelected(i,{focus:true})));
+    tablist.addEventListener('keydown',(e)=>{
+      const current=tabs.findIndex(t=>t===document.activeElement); if(current<0) return;
+      let next=null;
+      switch(e.key){ case'ArrowRight':next=(current+1)%tabs.length;break; case'ArrowLeft':next=(current-1+tabs.length)%tabs.length;break; case'Home':next=0;break; case'End':next=tabs.length-1;break;
+        case'Enter': case' ': setSelected(current,{focus:true}); e.preventDefault(); return; default:return; }
+      tabs[next].focus(); e.preventDefault();
     });
-
-    // 默认“appstore”；仅当 ?tab=community|appstore|feedback 时切换
     (function initTabs(){
-      const url = new URL(location.href);
-      const q = (url.searchParams.get('tab') || '').toLowerCase();
-      const key = (q === 'community' || q === 'appstore' || q === 'feedback') ? q : 'appstore';
-      selectByKey(key, { focus:false });
+      const url=new URL(location.href); const q=(url.searchParams.get('tab')||'').toLowerCase();
+      const key=(q==='community'||q==='appstore'||q==='feedback')?q:'appstore'; selectByKey(key,{focus:false});
     })();
 
-    // ======== 初始化按钮/链接 ========
-    // 仓库
+    // ======== 初始化链接/按钮 ========
     $('#ghLink').href = CONFIG.GH_HOMEPAGE;
 
-    // 复制群号按钮
-    $$('button[data-copy]').forEach(btn=>{
-      btn.addEventListener('click', ()=> copyTextFrom(btn.getAttribute('data-copy')));
-    });
+    $$('button[data-copy]').forEach(btn=>btn.addEventListener('click',()=>copyTextFrom(btn.getAttribute('data-copy'))));
+    $('#qq1-number').value = CONFIG.QQ1_NUMBER || ''; $('#btn-qq1-join').href = CONFIG.QQ1_INVITE_URL || '#';
+    $('#btn-qq1-url-copy').addEventListener('click',()=>{ if(!CONFIG.QQ1_INVITE_URL){ alert('请先配置 QQ1_INVITE_URL'); return; } navigator.clipboard.writeText(CONFIG.QQ1_INVITE_URL).then(()=>alert('已复制加群链接')); });
+    $('#qq2-number').value = CONFIG.QQ2_NUMBER || ''; const join2=$('#btn-qq2-join');
+    if(CONFIG.QQ2_IS_FULL){ join2.classList.add('disabled'); join2.setAttribute('aria-disabled','true'); join2.removeAttribute('href'); join2.title='该群已满'; }
+    else{ join2.href = CONFIG.QQ2_INVITE_URL || '#'; }
+    $('#btn-qq2-url-copy').addEventListener('click',()=>{ if(!CONFIG.QQ2_INVITE_URL){ alert('请先配置 QQ2_INVITE_URL'); return; } navigator.clipboard.writeText(CONFIG.QQ2_INVITE_URL).then(()=>alert('已复制加群链接')); });
 
-    // QQ 群
-    $('#qq1-number').value = CONFIG.QQ1_NUMBER || '';
-    $('#btn-qq1-join').href = CONFIG.QQ1_INVITE_URL || '#';
-    $('#btn-qq1-url-copy').addEventListener('click', ()=>{
-      if(!CONFIG.QQ1_INVITE_URL){ alert('请先配置 QQ1_INVITE_URL'); return; }
-      navigator.clipboard.writeText(CONFIG.QQ1_INVITE_URL).then(()=> alert('已复制加群链接'));
-    });
-
-    $('#qq2-number').value = CONFIG.QQ2_NUMBER || '';
-    const join2 = $('#btn-qq2-join');
-    if(CONFIG.QQ2_IS_FULL){
-      join2.classList.add('disabled');
-      join2.setAttribute('aria-disabled','true');
-      join2.removeAttribute('href');
-      join2.title = '该群已满';
-    }else{
-      join2.href = CONFIG.QQ2_INVITE_URL || '#';
-    }
-    $('#btn-qq2-url-copy').addEventListener('click', ()=>{
-      if(!CONFIG.QQ2_INVITE_URL){ alert('请先配置 QQ2_INVITE_URL'); return; }
-      navigator.clipboard.writeText(CONFIG.QQ2_INVITE_URL).then(()=> alert('已复制加群链接'));
-    });
-
-    // 微信企业客服（二维码）
+    // ======== 微信企业客服（二维码 + 识别 + 跳转） ========
     (function initWxKF(){
-      const card   = $('#wxkf-card');
-      const img    = $('#wx-qr-img');
-      const bigImg = $('#wx-qr-big');
-      const hint   = $('#wx-qr-hint');
-      const dlg    = $('#wx-qr-dialog');
-      const btnPreview = $('#wx-qr-preview-btn');
-      const btnDownload = $('#wx-qr-download');
-      const btnCopyLink = $('#wx-qr-copy-link');
-      const btnClose = $('#wx-qr-close');
+      const card=$('#wxkf-card'), img=$('#wx-qr-img'), link=$('#wx-qr-link'), bigImg=$('#wx-qr-big'), hint=$('#wx-qr-hint');
+      const dlg=$('#wx-qr-dialog'), btnPreview=$('#wx-qr-preview-btn'), btnDownload=$('#wx-qr-download'), btnCopyLink=$('#wx-qr-copy-link'), btnOpenWX=$('#wx-qr-open-wx'), btnClose=$('#wx-qr-close');
 
-      const url = (CONFIG.WX_QR_URL || '').trim();
-      if(!url){
-        // 未配置就隐藏整块
-        card?.remove();
-        dlg?.remove();
-        return;
+      const qrUrl=(CONFIG.WX_QR_URL||'').trim(); let wxLink=(CONFIG.WX_CHAT_URL||'').trim();
+      if(!qrUrl){ card?.remove(); dlg?.remove(); return; }
+
+      img.src=qrUrl; if(bigImg) bigImg.src=qrUrl; hint.textContent=CONFIG.WX_QR_HINT||'工作日在线';
+      btnDownload.href=qrUrl; btnCopyLink.addEventListener('click',()=>navigator.clipboard.writeText(qrUrl).then(()=>alert('已复制二维码链接')));
+
+      function tryOpenWeChat(url){ if(!url) return; window.location.href=url; } // 手机端可靠，桌面端可能无响应
+      function refreshOpenHandlers(){
+        if(wxLink){ link.href=wxLink; link.title='点击打开微信企业客服'; btnOpenWX.classList.remove('disabled'); btnOpenWX.onclick=()=>tryOpenWeChat(wxLink); }
+        else{ link.removeAttribute('href'); btnOpenWX.classList.add('disabled'); btnOpenWX.onclick=null; }
+      }
+      refreshOpenHandlers();
+
+      btnPreview.addEventListener('click',()=>{ if(typeof dlg?.showModal==='function'){ dlg.showModal(); } else { window.open(qrUrl,'_blank','noopener'); }});
+      btnClose?.addEventListener('click',()=>dlg.close());
+
+      // 自动识别（仅当未配置 WX_CHAT_URL）
+      if(!wxLink && window.jsQR){
+        const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d',{willReadFrequently:true});
+        function decode(){
+          const w=img.naturalWidth, h=img.naturalHeight; if(!w||!h) return;
+          cvs.width=w; cvs.height=h; ctx.drawImage(img,0,0,w,h);
+          const data=ctx.getImageData(0,0,w,h);
+          const res=jsQR(data.data,w,h,{inversionAttempts:'attemptBoth'});
+          if(res && res.data){
+            const val=res.data.trim();
+            if(/^weixin:\/\//i.test(val) || /^wxp:\/\//i.test(val) || /^https?:\/\//i.test(val)){
+              wxLink=val; refreshOpenHandlers(); console.log('QR decoded:', val);
+            }
+          } else { console.warn('未从图片中识别到二维码或清晰度不足。'); }
+        }
+        if(img.complete) decode(); else { img.onload=decode; img.onerror=()=>console.warn('二维码图片加载失败，无法识别。'); }
       }
 
-      img.src = url;
-      bigImg.src = url;
-      hint.textContent = (CONFIG.WX_QR_HINT || '工作日在线');
-
-      // 下载 & 复制
-      btnDownload.href = url;
-      btnCopyLink.addEventListener('click', ()=>{
-        navigator.clipboard.writeText(url).then(()=> alert('已复制二维码链接'));
-      });
-
-      // 预览（dialog）
-      btnPreview.addEventListener('click', ()=> {
-        if(typeof dlg.showModal === 'function'){ dlg.showModal(); }
-        else { window.open(url, '_blank', 'noopener'); }
-      });
-      btnClose.addEventListener('click', ()=> dlg.close());
-
-      // 点击图片也放大
-      img.addEventListener('click', ()=> btnPreview.click());
+      // 点击小图也可放大
+      img.addEventListener('click',()=>btnPreview.click());
     })();
 
-    // App Store（一级 Tab）
+    // ======== App Store ========
     (function initAppStore(){
-      const appId = (CONFIG.IOS_APP_ID || '').trim();
-      const panel = $('#panel-appstore');
+      const appId=(CONFIG.IOS_APP_ID||'').trim(); const panel=$('#panel-appstore');
       if(!appId){ panel.querySelector('.btns').style.display='none'; panel.insertAdjacentHTML('beforeend','<p class="muted">未配置 App ID。</p>'); return; }
-
-      const urls = getAppStoreURLs(appId, CONFIG.IOS_APP_COUNTRY || 'cn');
-
-      $('#btn-appstore-review').addEventListener('click', ()=>{
-        const url = isIOSDevice() ? urls.review.ios : urls.review.web;
-        window.location.href = url;
-      });
-      $('#btn-appstore-copy').addEventListener('click', ()=>{
-        navigator.clipboard.writeText(urls.review.web).then(()=> alert('已复制评价链接'));
-      });
-
-      $('#btn-appstore-open').addEventListener('click', ()=>{
-        const url = isIOSDevice() ? urls.detail.ios : urls.detail.web;
-        window.location.href = url;
-      });
-      $('#btn-appstore-copy-detail').addEventListener('click', ()=>{
-        navigator.clipboard.writeText(urls.detail.web).then(()=> alert('已复制详情页链接'));
-      });
+      const urls=getAppStoreURLs(appId,CONFIG.IOS_APP_COUNTRY||'cn');
+      $('#btn-appstore-review').addEventListener('click',()=>{ const url=isIOSDevice()?urls.review.ios:urls.review.web; window.location.href=url; });
+      $('#btn-appstore-copy').addEventListener('click',()=>navigator.clipboard.writeText(urls.review.web).then(()=>alert('已复制评价链接')));
+      $('#btn-appstore-open').addEventListener('click',()=>{ const url=isIOSDevice()?urls.detail.ios:urls.detail.web; window.location.href=url; });
+      $('#btn-appstore-copy-detail').addEventListener('click',()=>navigator.clipboard.writeText(urls.detail.web).then(()=>alert('已复制详情页链接')));
     })();
 
-    // 反馈模板与提交
-    const titleEl = $('#fb-title');
-    const typeEl = $('#fb-type');
-    const contentEl = $('#fb-content');
-    const contactEl = $('#contact');
-    const sysinfoEl = $('#sysinfo');
-
-    // 评分
-    let starsValue = 0;
-    const stars = $$('#stars .star');
-    stars.forEach(s=>{
-      s.addEventListener('click', ()=>{
-        starsValue = Number(s.dataset.v);
-        stars.forEach(x=> x.setAttribute('aria-checked', Number(x.dataset.v) <= starsValue));
-      });
-    });
-
-    function getSystemInfo(){
-      return [
-        `UA: ${navigator.userAgent}`,
-        `平台: ${navigator.platform}`,
-        `语言: ${navigator.language}`,
-        `屏幕: ${window.screen.width}x${window.screen.height} @${window.devicePixelRatio}`
-      ].join('\n');
-    }
-
+    // ======== 反馈模板 ========
+    const titleEl=$('#fb-title'), typeEl=$('#fb-type'), contentEl=$('#fb-content'), contactEl=$('#contact'), sysinfoEl=$('#sysinfo');
+    let starsValue=0; $$('#stars .star').forEach(s=>s.addEventListener('click',()=>{ starsValue=Number(s.dataset.v); $$('#stars .star').forEach(x=>x.setAttribute('aria-checked',Number(x.dataset.v)<=starsValue)); }));
+    function getSystemInfo(){ return [`UA: ${navigator.userAgent}`, `平台: ${navigator.platform}`, `语言: ${navigator.language}`, `屏幕: ${window.screen.width}x${window.screen.height} @${window.devicePixelRatio}`].join('\n'); }
     function buildMarkdown(){
-      const lines = [];
-      const t = titleEl.value.trim() || '(待补充标题)';
-      lines.push(`### 描述`);
-      lines.push(contentEl.value.trim() || '(详细描述/复现步骤/期望行为...)');
-      lines.push('\n### 类型');
-      lines.push(typeEl.value);
-      lines.push('\n### 评分');
-      lines.push(starsValue ? `${'★'.repeat(starsValue)} (${starsValue}/5)` : '未评分');
-      lines.push('\n### 联系方式');
-      lines.push(contactEl.value.trim() || '未提供');
-      if(sysinfoEl.checked){
-        lines.push('\n### 系统信息');
-        lines.push('```');
-        lines.push(getSystemInfo());
-        lines.push('```');
-      }
-      return { title: t, body: lines.join('\n') };
+      const lines=[]; const t=titleEl.value.trim()||'(待补充标题)';
+      lines.push('### 描述'); lines.push(contentEl.value.trim()||'(详细描述/复现步骤/期望行为...)');
+      lines.push('\n### 类型'); lines.push(typeEl.value);
+      lines.push('\n### 评分'); lines.push(starsValue?`${'★'.repeat(starsValue)} (${starsValue}/5)`:'未评分');
+      lines.push('\n### 联系方式'); lines.push(contactEl.value.trim()||'未提供');
+      if(sysinfoEl.checked){ lines.push('\n### 系统信息'); lines.push('```'); lines.push(getSystemInfo()); lines.push('```'); }
+      return { title:t, body:lines.join('\n') };
     }
-
-    function buildIssueURL(){
-      if(!CONFIG.GH_OWNER || !CONFIG.GH_REPO){
-        alert('请在代码中配置 GH_OWNER/GH_REPO');
-        return '#';
-      }
-      const { title, body } = buildMarkdown();
-      const base = `https://github.com/${CONFIG.GH_OWNER}/${CONFIG.GH_REPO}/issues/new`;
-      return `${base}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
-    }
-
-    function buildMailto(){
-      if(!CONFIG.MAIL_TO){
-        alert('请在代码中配置 MAIL_TO');
-        return '#';
-      }
-      const { title, body } = buildMarkdown();
-      return `mailto:${CONFIG.MAIL_TO}?subject=${encodeURIComponent('[反馈] ' + title)}&body=${encodeURIComponent(body)}`;
-    }
-
-    $('#btn-issue').addEventListener('click', (e)=>{
-      const url = buildIssueURL();
-      e.currentTarget.href = url;
-    });
-    $('#btn-mail').addEventListener('click', (e)=>{
-      const url = buildMailto();
-      e.currentTarget.href = url;
-      window.location.href = url;
-    });
-    $('#btn-copy-template').addEventListener('click', ()=>{
-      const { title, body } = buildMarkdown();
-      const all = `# ${title}\n\n${body}`;
-      navigator.clipboard.writeText(all).then(()=> alert('已复制反馈模板')).catch(()=> alert('复制失败'));
-    });
+    function buildIssueURL(){ if(!CONFIG.GH_OWNER||!CONFIG.GH_REPO){ alert('请在代码中配置 GH_OWNER/GH_REPO'); return '#'; } const {title,body}=buildMarkdown(); const base=`https://github.com/${CONFIG.GH_OWNER}/${CONFIG.GH_REPO}/issues/new`; return `${base}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`; }
+    function buildMailto(){ if(!CONFIG.MAIL_TO){ alert('请在代码中配置 MAIL_TO'); return '#'; } const {title,body}=buildMarkdown(); return `mailto:${CONFIG.MAIL_TO}?subject=${encodeURIComponent('[反馈] '+title)}&body=${encodeURIComponent(body)}`; }
+    $('#btn-issue').addEventListener('click',e=>{ e.currentTarget.href=buildIssueURL(); });
+    $('#btn-mail').addEventListener('click',e=>{ const url=buildMailto(); e.currentTarget.href=url; window.location.href=url; });
+    $('#btn-copy-template').addEventListener('click',()=>{ const {title,body}=buildMarkdown(); const all=`# ${title}\n\n${body}`; navigator.clipboard.writeText(all).then(()=>alert('已复制反馈模板')).catch(()=>alert('复制失败')); });
   </script>
 </body>
 </html>
