@@ -63,7 +63,21 @@
 
     footer{ margin:22px 4px; text-align:center; color:var(--muted); font-size:12px; }
 
+    /* ==== 微信企业客服二维码 样式 ==== */
+    .qr-box{ display:flex; align-items:flex-start; gap:16px; }
+    .qr-img{ width:180px; height:180px; border-radius:12px; border:1px solid var(--border); background:var(--panel); box-shadow: var(--shadow); object-fit:cover; cursor:zoom-in; }
+    .qr-actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .qr-meta{ color:var(--muted); font-size:13px; }
+    dialog.qr-preview{ border:none; border-radius:16px; padding:0; background:transparent; }
+    .qr-preview .inner{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow: var(--shadow); }
+    .qr-preview img{ width:320px; height:320px; border-radius:12px; object-fit:contain; display:block; }
+    .qr-preview .close{ margin-top:10px; width:100%; }
+
     @media (max-width:640px){ .row{ grid-template-columns:1fr; } .tabs{ position:static; } }
+    @media (max-width:480px){
+      .qr-img{ width:150px; height:150px; }
+      .qr-preview img{ width:260px; height:260px; }
+    }
   </style>
 </head>
 <body>
@@ -72,7 +86,6 @@
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
         <div>
-			<h1></h1>
           <h1>意见反馈 / 加入社群 / 去商店评价</h1>
         </div>
       </div>
@@ -89,7 +102,6 @@
       <div class="tab" role="tab" id="tab-community"
            aria-controls="panel-community" aria-selected="false" tabindex="-1"
            data-tab="community">加入交流群</div>
-      
     </nav>
 
     <!-- 提交反馈 -->
@@ -169,6 +181,31 @@
           </div>
         </div>
       </div>
+
+      <!-- 微信企业客服（二维码） -->
+      <div class="card" id="wxkf-card" style="margin-top:16px;">
+        <h3>微信企业客服</h3>
+        <div class="qr-box">
+          <img id="wx-qr-img" class="qr-img" alt="微信企业客服二维码" loading="lazy" decoding="async" />
+          <div>
+            <p id="wx-qr-hint" class="qr-meta"></p>
+            <div class="qr-actions">
+              <button class="primary" id="wx-qr-preview-btn">放大查看</button>
+              <a class="btn" id="wx-qr-download" download="wx-kefu.png">下载二维码</a>
+              <a class="btn" id="wx-qr-copy-link">复制二维码链接</a>
+            </div>
+            <p class="muted" style="margin-top:8px;">提示：手机端可长按识别；若无法识别，请保存图片后在微信中从相册识别。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 预览弹窗 -->
+      <dialog class="qr-preview" id="wx-qr-dialog">
+        <div class="inner">
+          <img id="wx-qr-big" alt="微信企业客服二维码（大图）" />
+          <button class="btn close" id="wx-qr-close">关闭</button>
+        </div>
+      </dialog>
     </section>
 
     <!-- 去商店评价（一级 Tab） -->
@@ -203,6 +240,10 @@
       QQ2_INVITE_URL: "https://qm.qq.com/q/J1eYFA7i4m",
       QQ2_IS_FULL: true,
 
+      // ==== 新增：微信企业客服二维码 ====
+      WX_QR_URL: "assets/wx-kefu.png", // 替换为你的二维码图片 URL
+      WX_QR_HINT: "工作日 10:00-19:00 在线",                    // 可选提示
+
       IOS_APP_ID: "1634761411",
       IOS_APP_COUNTRY: "cn",
 
@@ -235,7 +276,7 @@
       return /iPad|iPhone|iPod/.test(ua) || (navigator.platform && /iP(hone|od|ad)/.test(navigator.platform));
     }
 
-    // ======== Tabs（无障碍 + 键盘 + URL 同步；默认 feedback） ========
+    // ======== Tabs（无障碍 + 键盘 + URL 同步；默认 appstore） ========
     const tablist = document.querySelector('.tabs[role="tablist"]');
     const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
     const panels = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')));
@@ -279,11 +320,11 @@
       e.preventDefault();
     });
 
-    // 默认“提交反馈”；仅当 ?tab=community|appstore 时切换
+    // 默认“appstore”；仅当 ?tab=community|appstore|feedback 时切换
     (function initTabs(){
       const url = new URL(location.href);
       const q = (url.searchParams.get('tab') || '').toLowerCase();
-      const key = (q === 'community' || q === 'appstore') ? q : 'appstore';
+      const key = (q === 'community' || q === 'appstore' || q === 'feedback') ? q : 'appstore';
       selectByKey(key, { focus:false });
     })();
 
@@ -318,6 +359,47 @@
       if(!CONFIG.QQ2_INVITE_URL){ alert('请先配置 QQ2_INVITE_URL'); return; }
       navigator.clipboard.writeText(CONFIG.QQ2_INVITE_URL).then(()=> alert('已复制加群链接'));
     });
+
+    // 微信企业客服（二维码）
+    (function initWxKF(){
+      const card   = $('#wxkf-card');
+      const img    = $('#wx-qr-img');
+      const bigImg = $('#wx-qr-big');
+      const hint   = $('#wx-qr-hint');
+      const dlg    = $('#wx-qr-dialog');
+      const btnPreview = $('#wx-qr-preview-btn');
+      const btnDownload = $('#wx-qr-download');
+      const btnCopyLink = $('#wx-qr-copy-link');
+      const btnClose = $('#wx-qr-close');
+
+      const url = (CONFIG.WX_QR_URL || '').trim();
+      if(!url){
+        // 未配置就隐藏整块
+        card?.remove();
+        dlg?.remove();
+        return;
+      }
+
+      img.src = url;
+      bigImg.src = url;
+      hint.textContent = (CONFIG.WX_QR_HINT || '工作日在线');
+
+      // 下载 & 复制
+      btnDownload.href = url;
+      btnCopyLink.addEventListener('click', ()=>{
+        navigator.clipboard.writeText(url).then(()=> alert('已复制二维码链接'));
+      });
+
+      // 预览（dialog）
+      btnPreview.addEventListener('click', ()=> {
+        if(typeof dlg.showModal === 'function'){ dlg.showModal(); }
+        else { window.open(url, '_blank', 'noopener'); }
+      });
+      btnClose.addEventListener('click', ()=> dlg.close());
+
+      // 点击图片也放大
+      img.addEventListener('click', ()=> btnPreview.click());
+    })();
 
     // App Store（一级 Tab）
     (function initAppStore(){
