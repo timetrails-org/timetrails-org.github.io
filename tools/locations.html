@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>轨迹预览</title>
+  <style>
+    html, body, #map {
+      width: 100%; height: 100%;
+      margin: 0; padding: 0;
+      background: #0f1117; color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    }
+    .panel {
+      position: absolute; z-index: 9999; left: 12px; top: 12px;
+      background: rgba(15,15,15,0.7); border-radius: 12px; padding: 10px 14px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.6); font-size: 13px; line-height: 1.4;
+      max-width: 360px; backdrop-filter: blur(8px); color: #eee; user-select: none;
+    }
+    .panel b { color: #fff; font-weight: 600; font-size: 13px; }
+    .row { margin-top: 8px; display: grid; gap: 6px; }
+    .row label { font-size: 12px; color: #bbb; }
+    .row input[type="datetime-local"] {
+      width: 100%; box-sizing: border-box; border-radius: 8px;
+      border: 1px solid #30363d; background: #0b0d12; color: #e6edf3; padding: 6px 8px;
+    }
+    .btns { display: flex; gap: 8px; margin-top: 6px; }
+    .btns button, .btns label.btn {
+      flex: 1; border: 1px solid #30363d; background: #11141a; color: #e6edf3;
+      border-radius: 8px; padding: 6px 10px; cursor: pointer; text-align: center;
+    }
+    .btns button:hover, .btns label.btn:hover { background: #171b22; }
+    .muted { color: #aaa; }
+    .dropzone {
+      margin-top: 8px; border: 1px dashed #3a3f44; border-radius: 10px; padding: 8px;
+      text-align: center; font-size: 12px; color: #c9d1d9; background: rgba(13, 15, 22, 0.5);
+    }
+    .dropzone.dragover { border-color: #58a6ff; background: rgba(13, 15, 22, 0.8); }
+    .filehint { font-size: 12px; color: #9aa4af; }
+    .fileok { color: #59f; font-size: 12px; word-break: break-all; }
+    .error { color: #ff6b6b; font-size: 12px; white-space: pre-wrap; }
+    code { background: #0b0d12; padding: 1px 4px; border-radius: 4px; }
+  </style>
+
+  <!-- 百度地图 WebGL API（替换 ak 为你的） -->
+  <script src="https://api.map.baidu.com/api?v=1.0&type=webgl&ak=sUryxWWxRyHZxuzB634wHfmlqy6RgMEy"></script>
+
+  <!-- sql.js（SQLite WASM） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+
+  <!-- 内联默认数据（可为空数组；“使用内联示例”会读这里） -->
+  <script id="trackData" type="application/json">[]</script>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="panel" id="infoPanel">
+    <div><b>轨迹点预览</b></div>
+
+    <!-- 数据来源 -->
+    <div class="row">
+      <label>数据来源：</label>
+      <div class="btns">
+        <label class="btn" for="fileInput">选择文件（.json / .db / .sqlite）</label>
+        <!-- <button id="useInlineBtn" title="读取内联的 trackData JSON">使用内联示例</button> -->
+      </div>
+      <input id="fileInput" type="file" accept=".json,application/json,.db,.sqlite,application/octet-stream" style="display:none" />
+      <div class="dropzone" id="dropzone">拖拽 JSON 或 SQLite DB 文件到这里加载</div>
+      <div class="filehint">
+        JSON 结构：<code>[{ id, ts, lon_e6, lat_e6, ... }]</code>；
+        DB：需含表（如 <code>location</code>）并具备 <code>ts</code>/<code>lon_e6</code>/<code>lat_e6</code> 列（列名可兼容变体）。
+      </div>
+      <div id="fileStatus" class="fileok" style="display:none;"></div>
+      <div id="fileError" class="error" style="display:none;"></div>
+    </div>
+
+    <!-- 时间筛选 -->
+    <div class="row">
+      <label>时间片段（本地时区）：</label>
+      <input id="startInput" type="datetime-local" step="1" />
+      <input id="endInput" type="datetime-local" step="1" />
+      <div class="btns">
+        <button id="applyBtn">应用筛选</button>
+        <button id="resetBtn" title="重置为全量区间">重置</button>
+      </div>
+    </div>
+
+    <!-- 统计 -->
+    <div class="row">
+      <div id="statsCount">点数：-</div>
+      <div id="statsRange">时间范围：-</div>
+      <div class="muted">说明：按所选时间段过滤；所有点以图钉展示，无折线、无抽稀</div>
+      <div class="muted">坐标系：WGS84 → BD09</div>
+    </div>
+  </div>
+
+  <script>
+    /***********************
+     * 坐标转换工具
+     ***********************/
+    function _outOfChina(lng, lat) { return (lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271); }
+    function _transformLat(lng, lat) {
+      let ret = -100.0 + 2*lng + 3*lat + 0.2*lat*lat + 0.1*lng*lat + 0.2*Math.sqrt(Math.abs(lng));
+      ret += (20*Math.sin(6*lng*Math.PI) + 20*Math.sin(2*lng*Math.PI)) * 2/3;
+      ret += (20*Math.sin(lat*Math.PI) + 40*Math.sin(lat/3*Math.PI)) * 2/3;
+      ret += (160*Math.sin(lat/12*Math.PI) + 320*Math.sin(lat*Math.PI/30)) * 2/3;
+      return ret;
+    }
+    function _transformLng(lng, lat) {
+      let ret = 300.0 + lng + 2*lat + 0.1*lng*lng + 0.1*lng*lat + 0.1*Math.sqrt(Math.abs(lng));
+      ret += (20*Math.sin(6*lng*Math.PI) + 20*Math.sin(2*lng*Math.PI)) * 2/3;
+      ret += (20*Math.sin(lng*Math.PI) + 40*Math.sin(lng/3*Math.PI)) * 2/3;
+      ret += (150*Math.sin(lng/12*Math.PI) + 300*Math.sin(lng/30*Math.PI)) * 2/3;
+      return ret;
+    }
+    function wgs84ToGcj02(lng, lat) {
+      if (_outOfChina(lng, lat)) return [lng, lat];
+      const a = 6378245.0, ee = 0.00669342162296594323;
+      let dLat = _transformLat(lng-105.0, lat-35.0), dLng = _transformLng(lng-105.0, lat-35.0);
+      const radLat = lat / 180.0 * Math.PI;
+      let magic = Math.sin(radLat); magic = 1 - ee * magic * magic;
+      const sqrtMagic = Math.sqrt(magic);
+      dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * Math.PI);
+      dLng = (dLng * 180.0) / (a / sqrtMagic * Math.cos(radLat) * Math.PI);
+      return [lng + dLng, lat + dLat];
+    }
+    function gcj02ToBd09(lng, lat) {
+      const x = lng, y = lat;
+      const z = Math.sqrt(x*x + y*y) + 0.00002 * Math.sin(y * Math.PI * 3000.0 / 180.0);
+      const theta = Math.atan2(y, x) + 0.000003 * Math.cos(x * Math.PI * 3000.0 / 180.0);
+      return [z * Math.cos(theta) + 0.0065, z * Math.sin(theta) + 0.006];
+    }
+    function wgs84ToBd09(lng, lat) {
+      const [gcjLng, gcjLat] = wgs84ToGcj02(lng, lat);
+      return gcj02ToBd09(gcjLng, gcjLat);
+    }
+
+    /***********************
+     * 小工具
+     ***********************/
+    const pad2 = (n)=> (n<10 ? '0'+n : ''+n);
+    function tsToLocal(ts) {
+      const d = new Date(ts);
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+    }
+    function tsToLocalInput(ts) {
+      const d = new Date(ts);
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+    }
+    function inputToTs(value) {
+      if (!value) return null;
+      const ts = new Date(value).getTime();
+      return Number.isFinite(ts) ? ts : null;
+    }
+    // 统一毫秒（支持 ts 为秒级）
+    function normTs(x) {
+      const n = Number(x);
+      return n < 1e12 ? n * 1000 : n;
+    }
+
+    function buildBaiduPointsWithMeta(raw) {
+      const arr = [];
+      for (const p of raw) {
+        const wgsLng = p.lon_e6 / 1e6, wgsLat = p.lat_e6 / 1e6;
+        const [bdLng, bdLat] = wgs84ToBd09(wgsLng, wgsLat);
+        arr.push({ point: new BMapGL.Point(bdLng, bdLat), data: p });
+      }
+      return arr;
+    }
+
+    /***********************
+     * 全局状态
+     ***********************/
+    let map = null;
+    let rawTrack = [];           // JSON 模式下的内存数组
+    let minTs = null, maxTs = null;
+
+    // SQLite 会话缓存（存在即进入 DB 模式）
+    // { db, table, tsCol, lonCol, latCol, optCols }
+    window.__TT_SQLDB__ = null;
+
+    /***********************
+     * 渲染与筛选（通用）
+     ***********************/
+    function renderMarkers(filtered) {
+      map.clearOverlays();
+      if (filtered.length === 0) {
+        map.centerAndZoom(new BMapGL.Point(116.404, 39.915), 12);
+        document.getElementById("statsCount").textContent = `点数：0`;
+        document.getElementById("statsRange").textContent = `时间范围：-`;
+        return;
+      }
+      map.setViewport(filtered.map(x => x.point));
+
+      for (let i = 0; i < filtered.length; i++) {
+        const { point, data } = filtered[i];
+        const marker = new BMapGL.Marker(point);
+        const localTime = tsToLocal(data.ts);
+        const spd = (data.speed_cms != null) ? (data.speed_cms / 100.0).toFixed(2) + " m/s" : "n/a";
+        marker.setTitle(`#${i}\nid: ${data.id}\n时间: ${localTime}\n速度: ${spd}\n精度: ${data.h_acc_cm}cm`);
+        map.addOverlay(marker);
+      }
+
+      // 起终点
+      if (filtered.length >= 1) {
+        const first = filtered[0].point;
+        const startMarker = new BMapGL.Marker(first);
+        startMarker.setTitle("起点");
+        const startLabel = new BMapGL.Label("起点", { position: first, offset: new BMapGL.Size(10, -20) });
+        startLabel.setStyle({ color: "#00E0FF", backgroundColor: "rgba(0,0,0,0.6)", border: "1px solid #00E0FF",
+          borderRadius: "6px", padding: "2px 4px", fontSize: "12px", lineHeight: "14px" });
+        map.addOverlay(startMarker); map.addOverlay(startLabel);
+      }
+      if (filtered.length >= 2) {
+        const last = filtered[filtered.length - 1].point;
+        const endMarker = new BMapGL.Marker(last);
+        endMarker.setTitle("终点");
+        const endLabel = new BMapGL.Label("终点", { position: last, offset: new BMapGL.Size(10, -20) });
+        endLabel.setStyle({ color: "#FF4D4F", backgroundColor: "rgba(0,0,0,0.6)", border: "1px solid #FF4D4F",
+          borderRadius: "6px", padding: "2px 4px", fontSize: "12px", lineHeight: "14px" });
+        map.addOverlay(endMarker); map.addOverlay(endLabel);
+      }
+    }
+
+    // JSON 模式：在内存数组上过滤
+    function applyFilter_JSON() {
+      const sTs = inputToTs(document.getElementById("startInput").value);
+      const eTs = inputToTs(document.getElementById("endInput").value);
+      const s = (sTs == null) ? minTs : sTs;
+      const e = (eTs == null) ? maxTs : eTs;
+      if (s > e) { alert("起始时间不可晚于结束时间"); return; }
+
+      const filteredRaw = rawTrack.filter(p => p.ts >= s && p.ts <= e);
+      renderMarkers(buildBaiduPointsWithMeta(filteredRaw));
+
+      const count = filteredRaw.length;
+      document.getElementById("statsCount").textContent = `点数：${count}`;
+      const startTxt = (count > 0) ? tsToLocal(filteredRaw[0].ts) : "-";
+      const endTxt   = (count > 0) ? tsToLocal(filteredRaw[count-1].ts) : "-";
+      document.getElementById("statsRange").textContent = `时间范围：${startTxt} → ${endTxt}`;
+    }
+
+    // DB 模式：WHERE ts BETWEEN ? AND ? 直查
+    function applyFilter_DB() {
+      const sess = window.__TT_SQLDB__;
+      if (!sess) { applyFilter_JSON(); return; }
+
+      const sTs = inputToTs(document.getElementById("startInput").value);
+      const eTs = inputToTs(document.getElementById("endInput").value);
+      const s = (sTs == null) ? minTs : sTs;
+      const e = (eTs == null) ? maxTs : eTs;
+      if (s > e) { alert("起始时间不可晚于结束时间"); return; }
+
+      const { db, table, tsCol, lonCol, latCol, optCols } = sess;
+      const selectCols = [tsCol, lonCol, latCol, ...optCols];
+      const sql = `SELECT ${selectCols.join(", ")} FROM ${table} WHERE ${tsCol} BETWEEN ? AND ? ORDER BY ${tsCol} ASC;`;
+      const res = db.exec(sql, [Math.floor(s), Math.floor(e)]);
+      if (!res || res.length === 0) {
+        renderMarkers([]);
+        document.getElementById("statsCount").textContent = `点数：0`;
+        document.getElementById("statsRange").textContent = `时间范围：-`;
+        return;
+      }
+      const cols = res[0].columns, rows = res[0].values;
+      const arr = rows.map(row => {
+        const r = {}; for (let i=0;i<cols.length;i++) r[cols[i]] = row[i];
+        return {
+          ts: normTs(r[tsCol]),
+          lon_e6: Number(r[lonCol]),
+          lat_e6: Number(r[latCol]),
+          ...optCols.reduce((o,k)=>(o[k]=r[k],o),{})
+        };
+      });
+
+      renderMarkers(buildBaiduPointsWithMeta(arr));
+      const count = arr.length;
+      document.getElementById("statsCount").textContent = `点数：${count}`;
+      const startTxt = (count > 0) ? tsToLocal(arr[0].ts) : "-";
+      const endTxt   = (count > 0) ? tsToLocal(arr[count-1].ts) : "-";
+      document.getElementById("statsRange").textContent = `时间范围：${startTxt} → ${endTxt}`;
+    }
+
+    function applyFilter() {
+      if (window.__TT_SQLDB__) applyFilter_DB();
+      else applyFilter_JSON();
+    }
+
+    function resetRange() {
+      document.getElementById("startInput").value = tsToLocalInput(minTs);
+      document.getElementById("endInput").value   = tsToLocalInput(maxTs);
+      applyFilter();
+    }
+
+    /***********************
+     * 数据加载（JSON / SQLite）
+     ***********************/
+    function setTrackData(arr, sourceLabel = "内存") {
+      // 切回 JSON 模式
+      if (window.__TT_SQLDB__ && window.__TT_SQLDB__.db) {
+        // sql.js 是内存数据库，这里不必强制 close；若需要可调用 window.__TT_SQLDB__.db.close()
+      }
+      window.__TT_SQLDB__ = null;
+
+      if (!Array.isArray(arr)) throw new Error("JSON 顶层必须是数组");
+      const cleaned = arr.filter(p =>
+        p && Number.isFinite(p.ts) && Number.isFinite(p.lon_e6) && Number.isFinite(p.lat_e6)
+      ).map(p => ({ ...p, ts: normTs(p.ts) }));
+      cleaned.sort((a, b) => a.ts - b.ts);
+      rawTrack = cleaned;
+
+      if (cleaned.length > 0) { minTs = cleaned[0].ts; maxTs = cleaned[cleaned.length - 1].ts; }
+      else { const now = Date.now(); minTs = now - 3600_000; maxTs = now; }
+
+      const fileStatus = document.getElementById("fileStatus");
+      fileStatus.style.display = "block";
+      fileStatus.textContent = `已加载（${sourceLabel}）：${cleaned.length} 条`;
+      document.getElementById("fileError").style.display = "none";
+
+      const s = document.getElementById("startInput"), e = document.getElementById("endInput");
+      s.min = tsToLocalInput(minTs); s.max = tsToLocalInput(maxTs);
+      e.min = tsToLocalInput(minTs); e.max = tsToLocalInput(maxTs);
+      resetRange();
+    }
+
+    function loadFromInlineScript() {
+      const node = document.getElementById('trackData');
+      const rawText = node.textContent.trim();
+      try { setTrackData(JSON.parse(rawText || "[]"), "内联 trackData"); }
+      catch (e) {
+        const fileError = document.getElementById("fileError");
+        fileError.style.display = "block";
+        fileError.textContent = `内联 JSON 解析失败：${e.message}`;
+      }
+    }
+
+    // --- sql.js 初始化（只初始化一次） ---
+    let SQL_INIT_PROMISE = null;
+    function initSqlJsOnce() {
+      if (!SQL_INIT_PROMISE) {
+        SQL_INIT_PROMISE = initSqlJs({
+          locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${file}`
+        });
+      }
+      return SQL_INIT_PROMISE;
+    }
+
+    async function loadFromSQLite(file) {
+      const fileError = document.getElementById("fileError");
+      const fileStatus = document.getElementById("fileStatus");
+      fileError.style.display = "none"; fileStatus.style.display = "none";
+
+      try {
+        const SQL = await initSqlJsOnce();
+        const buf = new Uint8Array(await file.arrayBuffer());
+        const db = new SQL.Database(buf);
+
+        // 列出所有表
+        const tables = db.exec(`SELECT name FROM sqlite_master WHERE type='table'`)
+          ?.flatMap(r => r.values.map(v => String(v[0]))) || [];
+
+        // 优先候选
+        const prefer = ["location", "Location", "locations"];
+        let candidate = prefer.find(n => tables.includes(n)) || null;
+
+        // 列信息
+        function tableInfo(name) { return db.exec(`PRAGMA table_info(${JSON.stringify(name)})`); }
+        function colSet(info) { return new Set(info[0]?.values?.map(v => String(v[1])) || []); }
+        function pickOne(names, candidates) { for (const c of candidates) if (names.has(c)) return c; return null; }
+
+        const neededCandidates = {
+          ts:  ["ts","timestamp","time_ms","time","ts_ms"],
+          lon: ["lon_e6","longitude_e6","lon","longitude","lon_e7","longitude_e7"],
+          lat: ["lat_e6","latitude_e6","lat","latitude","lat_e7","latitude_e7"],
+        };
+
+        function findTableWithRequiredCols() {
+          if (candidate) {
+            const info = tableInfo(candidate);
+            const names = colSet(info);
+            const tsCol  = pickOne(names, neededCandidates.ts);
+            const lonCol = pickOne(names, neededCandidates.lon);
+            const latCol = pickOne(names, neededCandidates.lat);
+            if (tsCol && lonCol && latCol) return { table: candidate, names };
+          }
+          for (const t of tables) {
+            const info = tableInfo(t);
+            if (!info || info.length === 0) continue;
+            const names = colSet(info);
+            const tsCol  = pickOne(names, neededCandidates.ts);
+            const lonCol = pickOne(names, neededCandidates.lon);
+            const latCol = pickOne(names, neededCandidates.lat);
+            if (tsCol && lonCol && latCol) return { table: t, names };
+          }
+          return null;
+        }
+
+        const found = findTableWithRequiredCols();
+        if (!found) throw new Error("未找到同时包含 ts / lon / lat 关键列的表（如 location）");
+
+        const names = found.names;
+        const table = found.table;
+
+        const tsCol  = pickOne(names, neededCandidates.ts);
+        const lonCol = pickOne(names, neededCandidates.lon);
+        const latCol = pickOne(names, neededCandidates.lat);
+
+        const optCols = ["id","h_acc_cm","alt_mm","v_acc_cm","speed_cms","speed_acc_cms","course_deci","course_acc_deci","floor_level","decision_flag","move_mode_raw"]
+          .filter(c => names.has(c));
+
+        // 读取最小/最大时间
+        const mm = db.exec(`SELECT MIN(${tsCol}) AS min_ts, MAX(${tsCol}) AS max_ts FROM ${table};`);
+        const minMaxRow = mm[0]?.values?.[0] || [];
+        minTs = normTs(minMaxRow[0]);
+        maxTs = normTs(minMaxRow[1]);
+        if (!Number.isFinite(minTs) || !Number.isFinite(maxTs)) throw new Error("无法读取 MIN/MAX(ts)");
+
+        window.__TT_SQLDB__ = { db, table, tsCol, lonCol, latCol, optCols };
+
+        // 配置时间输入并默认应用一次
+        const s = document.getElementById("startInput"), e = document.getElementById("endInput");
+        s.min = tsToLocalInput(minTs); s.max = tsToLocalInput(maxTs);
+        e.min = tsToLocalInput(minTs); e.max = tsToLocalInput(maxTs);
+        s.value = tsToLocalInput(minTs); e.value = tsToLocalInput(maxTs);
+
+        document.getElementById("fileStatus").style.display = "block";
+        document.getElementById("fileStatus").textContent = `已连接 SQLite（${file.name} / 表：${table}）`;
+
+        applyFilter_DB(); // 首次范围直查渲染
+      } catch (e) {
+        fileError.style.display = "block";
+        fileError.textContent = `SQLite 解析失败：${e.message}`;
+        window.__TT_SQLDB__ = null;
+      }
+    }
+
+    async function loadFromFile(file) {
+      const name = (file?.name || "").toLowerCase();
+      if (name.endsWith(".json")) {
+        try { setTrackData(JSON.parse(await file.text()), file.name); }
+        catch (e) {
+          const fileError = document.getElementById("fileError");
+          fileError.style.display = "block";
+          fileError.textContent = `JSON 解析失败：${e.message}`;
+        }
+      } else if (name.endsWith(".db") || name.endsWith(".sqlite")) {
+        await loadFromSQLite(file);
+      } else {
+        // 不是 json 就当 db 试一下
+        await loadFromSQLite(file);
+      }
+    }
+
+    /***********************
+     * 初始化
+     ***********************/
+    function init() {
+      // 地图
+      map = new BMapGL.Map("map", { enableRotate: false, enableTilt: false });
+      map.centerAndZoom(new BMapGL.Point(116.404, 39.915), 12);
+      map.addControl(new BMapGL.ZoomControl());
+      map.enableScrollWheelZoom(true);
+
+      // 时间控件
+      document.getElementById("applyBtn").addEventListener("click", applyFilter);
+      document.getElementById("resetBtn").addEventListener("click", resetRange);
+      document.getElementById("startInput").addEventListener("change", applyFilter);
+      document.getElementById("endInput").addEventListener("change", applyFilter);
+
+      // 数据按钮
+      // document.getElementById("useInlineBtn").addEventListener("click", loadFromInlineScript);
+
+      // 文件选择
+      const fileInput = document.getElementById("fileInput");
+      fileInput.addEventListener("change", (e) => {
+        const f = e.target.files?.[0];
+        if (f) loadFromFile(f);
+      });
+
+      // 拖拽导入
+      const dz = document.getElementById("dropzone");
+      const prevent = ev => { ev.preventDefault(); ev.stopPropagation(); };
+      ["dragenter","dragover","dragleave","drop"].forEach(evt => dz.addEventListener(evt, prevent, false));
+      ["dragenter","dragover"].forEach(evt => dz.addEventListener(evt, () => dz.classList.add("dragover")));
+      ["dragleave","drop"].forEach(evt => dz.addEventListener(evt, () => dz.classList.remove("dragover")));
+      dz.addEventListener("drop", (ev) => {
+        const f = ev.dataTransfer.files?.[0];
+        if (f) loadFromFile(f);
+      });
+
+      // 默认尝试读取内联
+      loadFromInlineScript();
+    }
+
+    init();
+  </script>
+</body>
+</html>
