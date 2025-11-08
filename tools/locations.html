@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>轨迹预览（基础版：时间+坐标）</title>
+  <title>轨迹预览（基础：时间+坐标，自动识别秒/毫秒）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html, body, #map { width:100%; height:100%; margin:0; padding:0; background:#0f1117; color:#fff; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif; }
@@ -64,8 +64,8 @@
         <input id="fileInput" type="file" accept=".json,application/json,.db,.sqlite,application/octet-stream" style="display:none" />
         <div class="dropzone" id="dropzone">拖拽 JSON 或 SQLite DB 文件到这里加载</div>
         <div class="muted">
-          JSON 支持：<code>timestamp / timeString / ts</code> 与 <code>longitude|lon / latitude|lat</code>（或 <code>lon_e6 / lat_e6</code>）；<br />
-          SQLite：至少包含时间/经度/纬度列，常见别名会自动识别。
+          JSON：<code>timestamp / timeString / ts</code> 与 <code>longitude|lon / latitude|lat</code>（或 <code>lon_e6 / lat_e6</code>）；<br />
+          SQLite：至少包含时间/经度/纬度列，常见别名自动识别；<code>gcj02* / isMarsLocation</code> 可选；时间列支持秒或毫秒。
         </div>
         <div id="fileStatus" class="fileok" style="display:none;"></div>
         <div id="fileError" class="error" style="display:none;"></div>
@@ -84,7 +84,7 @@
       <div class="row">
         <div id="statsCount">点数：-</div>
         <div id="statsRange">时间范围：-</div>
-        <div class="muted">说明：仅使用时间与坐标；坐标系自动识别 WGS84/GCJ-02 → BD09</div>
+        <div class="muted">仅使用时间与坐标；WGS84/GCJ-02 自动识别并转换至 BD09。</div>
       </div>
     </div>
   </div>
@@ -113,13 +113,9 @@
       return NaN;
     }
     function pickDegFlexible(p){
-      // 优先 WGS 字段
       if (Number.isFinite(p.latitude) && Number.isFinite(p.longitude)) return {lng:+p.longitude, lat:+p.latitude, gcj:false};
-      // 若仅有 GCJ 字段
       if (Number.isFinite(p.gcj02latitude) && Number.isFinite(p.gcj02longitude)) return {lng:+p.gcj02longitude, lat:+p.gcj02latitude, gcj:true};
-      // 已是 e6
       if (Number.isFinite(p.lon_e6) && Number.isFinite(p.lat_e6)) return {lng:p.lon_e6/1e6, lat:p.lat_e6/1e6, gcj:false};
-      // 其他常见命名
       if (Number.isFinite(p.lat) && Number.isFinite(p.lon)) return {lng:+p.lon, lat:+p.lat, gcj:false};
       return null;
     }
@@ -129,7 +125,10 @@
     let map=null;
     let rawTrack=[]; // 仅 { ts, lon_e6, lat_e6, __gcj? }
     let minTs=null, maxTs=null;
-    window.__TT_SQLDB__=null; // { db, table, tsCol, lonCol, latCol, optCols }
+
+    // SQLite 会话信息（动态列 + 时间单位）
+    // { db, table, tsCol, lonCol, latCol, gcjLatCol|null, gcjLonCol|null, isMarsCol|null, tsIsMs:boolean }
+    window.__TT_SQLDB__=null;
 
     /************ 渲染 ************/
     function buildPoints(raw){
@@ -161,7 +160,6 @@
         marker.setTitle(`#${i}\n时间: ${tsToLocal(data.ts)}`);
         map.addOverlay(marker);
       }
-      // 起终点
       if (filtered.length>=1){
         const first=filtered[0].point;
         const startMarker=new BMapGL.Marker(first);
@@ -208,24 +206,50 @@
       const e=(eTs==null)?maxTs:eTs;
       if (s>e){ alert("起始时间不可晚于结束时间"); return; }
 
-      const { db, table, tsCol, lonCol, latCol } = sess;
-      const sql=`SELECT ${tsCol} AS _ts, ${lonCol} AS _lon, ${latCol} AS _lat, gcj02latitude AS _gclat, gcj02longitude AS _gclon
-                 FROM ${table} WHERE ${tsCol} BETWEEN ? AND ? ORDER BY ${tsCol} ASC;`;
-      const res=db.exec(sql,[Math.floor(s),Math.floor(e)]);
+      const { db, table, tsCol, lonCol, latCol, gcjLatCol, gcjLonCol, isMarsCol, tsIsMs } = sess;
+
+      // 把页面选择的毫秒时间，转换为 DB 的单位（秒或毫秒）
+      const qS = tsIsMs ? Math.floor(s) : Math.floor(s/1000);
+      const qE = tsIsMs ? Math.floor(e) : Math.floor(e/1000);
+
+      const selectParts = [
+        `${tsCol} AS _ts`,
+        `${lonCol} AS _lon`,
+        `${latCol} AS _lat`,
+      ];
+      if (gcjLatCol) selectParts.push(`${gcjLatCol} AS _gclat`);
+      if (gcjLonCol) selectParts.push(`${gcjLonCol} AS _gclon`);
+      if (isMarsCol) selectParts.push(`${isMarsCol} AS _ismars`);
+
+      const sql=`SELECT ${selectParts.join(", ")} FROM ${table} WHERE ${tsCol} BETWEEN ? AND ? ORDER BY ${tsCol} ASC;`;
+      const res=db.exec(sql,[qS,qE]);
+
       if (!res||res.length===0){
         renderMarkers([]); document.getElementById("statsCount").textContent=`点数：0`;
         document.getElementById("statsRange").textContent=`时间范围：-`; document.getElementById("miniStats").textContent=`0 · —`; return;
       }
+
       const cols=res[0].columns, rows=res[0].values;
       const arr=rows.map(row=>{
         const r={}; for (let i=0;i<cols.length;i++) r[cols[i]]=row[i];
-        const ts=normTs(r._ts);
+
+        // 读出后统一为毫秒
+        const ts = tsIsMs ? Number(r._ts) : Number(r._ts) * 1000;
+
         const lon=Number(r._lon), lat=Number(r._lat);
         const looksDeg=Number.isFinite(lon)&&Number.isFinite(lat)&&Math.abs(lon)<=180&&Math.abs(lat)<=90;
         const lon_e6=looksDeg?Math.round(lon*1e6):Math.round(lon);
         const lat_e6=looksDeg?Math.round(lat*1e6):Math.round(lat);
-        const gcj = Number.isFinite(r._gclat)&&Number.isFinite(r._gclon); // 若表含 gcj02 字段，则视为 GCJ
-        return { ts, lon_e6, lat_e6, __gcj: gcj };
+
+        let isGcj=false;
+        if (typeof r._ismars!=="undefined" && Number(r._ismars)===1) {
+          isGcj=true;
+        } else if (typeof r._gclat!=="undefined" && typeof r._gclon!=="undefined") {
+          const glat=Number(r._gclat), glon=Number(r._gclon);
+          if (Number.isFinite(glat)&&Number.isFinite(glon)) isGcj=true;
+        }
+
+        return { ts, lon_e6, lat_e6, __gcj:isGcj };
       });
 
       renderMarkers(buildPoints(arr));
@@ -296,7 +320,7 @@
         const buf=new Uint8Array(await file.arrayBuffer());
         const db=new SQL.Database(buf);
         const tables=db.exec(`SELECT name FROM sqlite_master WHERE type='table'`)?.flatMap(r=>r.values.map(v=>String(v[0])))||[];
-        const prefer=["location","Location","locations"];
+        const prefer=["location","Location","locations","userMark","frequentIndexTable"];
         let candidate=prefer.find(n=>tables.includes(n))||null;
 
         function tableInfo(name){ return db.exec(`PRAGMA table_info(${JSON.stringify(name)})`); }
@@ -320,18 +344,40 @@
         }
 
         const found=findTable();
-        if (!found) throw new Error("未找到同时包含时间/经度/纬度关键列的表（例如 location）");
+        if (!found) throw new Error("未找到同时包含时间/经度/纬度关键列的表（例如 location/userMark）");
 
-        const { table, tsCol, lonCol, latCol } = found;
+        const { table, tsCol, lonCol, latCol, names } = found;
 
-        // 预读时间范围
+        // 记录可选 GCJ 相关列（动态查询）
+        const hasGcjLat = names.has("gcj02latitude");
+        const hasGcjLon = names.has("gcj02longitude");
+        const hasIsMars = names.has("isMarsLocation");
+
+        // 预读时间范围（RAW）
         const mm=db.exec(`SELECT MIN(${tsCol}) AS min_ts, MAX(${tsCol}) AS max_ts FROM ${table};`);
         const row=mm[0]?.values?.[0]||[];
-        minTs=normTs(row[0]); maxTs=normTs(row[1]);
-        if (!Number.isFinite(minTs)||!Number.isFinite(maxTs)) throw new Error("无法读取 MIN/MAX(ts)");
+        const rawMin = Number(row[0]);
+        const rawMax = Number(row[1]);
 
-        window.__TT_SQLDB__={ db, table, tsCol, lonCol, latCol };
+        if (!Number.isFinite(rawMin)||!Number.isFinite(rawMax)) throw new Error("无法读取 MIN/MAX(ts)");
 
+        // 判断 DB 时间单位（>=1e12 视为毫秒）
+        const tsIsMs = (rawMin >= 1e12 || rawMax >= 1e12);
+
+        // 统一到毫秒用于 UI
+        minTs = tsIsMs ? rawMin : rawMin * 1000;
+        maxTs = tsIsMs ? rawMax : rawMax * 1000;
+
+        // 保存会话（包含动态列名 + 时间单位）
+        window.__TT_SQLDB__={
+          db, table, tsCol, lonCol, latCol,
+          gcjLatCol: hasGcjLat ? "gcj02latitude"  : null,
+          gcjLonCol: hasGcjLon ? "gcj02longitude" : null,
+          isMarsCol: hasIsMars ? "isMarsLocation" : null,
+          tsIsMs
+        };
+
+        // 配置时间输入并首次渲染
         const s=document.getElementById("startInput"), e=document.getElementById("endInput");
         s.min=tsToLocalInput(minTs); s.max=tsToLocalInput(maxTs);
         e.min=tsToLocalInput(minTs); e.max=tsToLocalInput(maxTs);
