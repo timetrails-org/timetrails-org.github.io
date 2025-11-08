@@ -1,5 +1,6 @@
 {
   "tools.header.brand": "TimeTrails",
+  "tools.header.closeMenu": "Close Menu",
   "tools.header.lang": "Language",
   "tools.header.nav.home": "Home",
   "tools.header.nav.locations": "Track Preview",
@@ -16,6 +17,7 @@
   "tools.locations.connectLine": "Connect into a line",
   "tools.locations.dropHint": "Drag and drop JSON / SQLite / CSV / GPX / KML files here to load",
   "tools.locations.endPoint": "End Point",
+  "tools.locations.errFileLoad": "File loading failed: {msg}",
   "tools.locations.errInlineJSON": "Inline JSON parsing failed: {msg}",
   "tools.locations.errSQLiteParse": "SQLite parsing failed: {msg}",
   "tools.locations.errSQLiteQuery": "SQLite query failed: {msg}",
