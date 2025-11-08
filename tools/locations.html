@@ -2,11 +2,11 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>轨迹预览（时间+坐标；只画点，海量点自适应 | 支持 CSV/GPX/KML）</title>
+  <title>轨迹预览（时间+坐标；点/线可配，海量点自适应 | CSV/GPX/KML/SQLite）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html, body, #map { width:100%; height:100%; margin:0; padding:0; background:#0f1117; color:#fff; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif; }
-    .panel { position:absolute; z-index:9999; left:12px; top:12px; background:rgba(15,15,15,0.7); border-radius:12px; padding:10px 14px; box-shadow:0 12px 32px rgba(0,0,0,0.6); font-size:13px; line-height:1.4; max-width:360px; backdrop-filter:blur(8px); color:#eee; user-select:none; transition:transform .22s ease, opacity .22s ease, max-height .22s ease, padding .22s ease; }
+    .panel { position:absolute; z-index:9999; left:12px; top:12px; background:rgba(15,15,15,0.7); border-radius:12px; padding:10px 14px; box-shadow:0 12px 32px rgba(0,0,0,0.6); font-size:13px; line-height:1.4; max-width:380px; backdrop-filter:blur(8px); color:#eee; user-select:none; transition:transform .22s ease, opacity .22s ease, max-height .22s ease, padding .22s ease; }
     .panel b { color:#fff; font-weight:600; font-size:13px; }
     .panel-header { display:flex; align-items:center; gap:8px; cursor:default; }
     .panel-title { display:flex; align-items:center; gap:8px; min-width:0; }
@@ -15,7 +15,8 @@
     .toggle:hover { background:#171b22; }
     .content { margin-top:8px; }
     .row { margin-top:8px; display:grid; gap:6px; }
-    .row input[type="datetime-local"]{ width:100%; box-sizing:border-box; border-radius:8px; border:1px solid #30363d; background:#0b0d12; color:#e6edf3; padding:6px 8px; }
+    .row.inline { grid-template-columns: auto 1fr; align-items:center; }
+    .row input[type="datetime-local"], .row input[type="color"]{ width:100%; box-sizing:border-box; border-radius:8px; border:1px solid #30363d; background:#0b0d12; color:#e6edf3; padding:6px 8px; }
     .btns { display:flex; gap:8px; margin-top:6px; }
     .btns button, .btns label.btn { flex:1; border:1px solid #30363d; background:#11141a; color:#e6edf3; border-radius:8px; padding:6px 10px; cursor:pointer; text-align:center; }
     .btns button:hover, .btns label.btn:hover { background:#171b22; }
@@ -32,9 +33,12 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { margin-top: 12px; color: #c9d1d9; font-size: 12px; text-align: center; }
 
-    /* 折叠态样式（关键修复） */
+    /* 折叠态样式 */
     .panel.collapsed { padding:8px 10px; max-height:48px; overflow:hidden; }
     .panel.collapsed .content { display:none; }
+    .opts { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .opts .seg { display:flex; gap:8px; align-items:center; }
+    .opts label { display:flex; gap:6px; align-items:center; cursor:pointer; }
   </style>
 
   <!-- 百度地图 WebGL API（替换 ak 为你的） -->
@@ -42,7 +46,7 @@
   <!-- sql.js（SQLite WASM） -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
 
-  <!-- 默认内联数据 -->
+  <!-- 默认内联数据（可替换为你的点） -->
   <script id="trackData" type="application/json">[]</script>
 </head>
 <body>
@@ -51,7 +55,7 @@
   <div class="panel" id="infoPanel">
     <div class="panel-header" title="双击标题栏可折叠/展开">
       <div class="panel-title">
-        <b>轨迹点预览（只画点）</b>
+        <b>轨迹点预览</b>
         <span id="miniStats" class="mini">—</span>
       </div>
       <button id="togglePanel" class="toggle" aria-expanded="false">收起</button>
@@ -67,10 +71,8 @@
                style="display:none" />
         <div class="dropzone" id="dropzone">拖拽 JSON / SQLite / CSV / GPX / KML 文件到这里加载</div>
         <div class="muted">
-          JSON/CSV：列包含 <code>timestamp/time/ts/timeString</code> 与 <code>longitude|lon / latitude|lat</code>（或 <code>lon_e6 / lat_e6</code>）；<br/>
-          GPX：读取 <code>&lt;trkpt lat="…" lon="…"&gt;&lt;time&gt;…&lt;/time&gt;</code> 与 <code>&lt;wpt&gt;</code>；<br/>
-          KML：读取 <code>gx:Track</code> 的 <code>when</code>/<code>gx:coord</code>，或 <code>LineString/Point.coordinates</code>；<br/>
-          SQLite：至少包含 时间/经度/纬度；支持秒/毫秒识别；可选 <code>gcj02*</code>/<code>isMarsLocation</code>。
+          JSON/CSV：需要时间列与经纬度列；GPX/KML 自动识别；SQLite 自动探测表与列。<br/>
+          坐标：默认视为 WGS84；如含 <code>gcj02*</code> 或 <code>isMarsLocation</code> 将按国测局坐标纠偏。
         </div>
         <div id="fileStatus" class="fileok" style="display:none;"></div>
         <div id="fileError" class="error" style="display:none;"></div>
@@ -86,10 +88,24 @@
         </div>
       </div>
 
+      <!-- 新增：显示方式与颜色配置 -->
+      <div class="row">
+        <div class="opts">
+          <div class="seg">
+            <label><input type="checkbox" id="optShowPoints" checked> 显示点</label>
+            <label><input type="checkbox" id="optShowLine"> 连成线</label>
+          </div>
+          <div class="seg">
+            <span>颜色</span>
+            <input type="color" id="pointColor" value="#5ab1ff" style="width:48px; height:32px; padding:0; border-radius:8px;">
+          </div>
+        </div>
+        <div class="muted">≥1000 点优先使用 PointCollection；若不可用自动回退 Canvas。折线在超大数据量时会自动限制。</div>
+      </div>
+
       <div class="row">
         <div id="statsCount">点数：-</div>
         <div id="statsRange">时间范围：-</div>
-        <div class="muted">小于 1000：Marker；≥1000：PointCollection；若不可用则回退 Canvas 海量点。</div>
       </div>
     </div>
   </div>
@@ -121,7 +137,7 @@
     function inputToTs(val){ if(!val) return null; const t=new Date(val).getTime(); return Number.isFinite(t)?t:null; }
     const num = x => (x==null || x==="") ? NaN : Number(x);
 
-    /************ 兼容解析：时间/坐标抽取（JSON/CSV/GPX/KML 通用）************/
+    /************ 兼容解析（JSON/CSV/GPX/KML）************/
     function parseTsFlexible(p){
       if (Number.isFinite(p.ts)) return p.ts<1e12?p.ts*1000:p.ts;
       if (Number.isFinite(p.timestamp)) return p.timestamp<1e12?p.timestamp*1000:p.timestamp;
@@ -141,7 +157,7 @@
       return null;
     }
 
-    /************ CSV 解析 ************/
+    /************ CSV ************/
     function splitCSVLine(line){
       const out=[]; let cur=''; let inQ=false;
       for (let i=0;i<line.length;i++){
@@ -204,7 +220,7 @@
       return out;
     }
 
-    /************ GPX 解析 ************/
+    /************ GPX ************/
     function parseGPX(text){
       const doc = new DOMParser().parseFromString(text, 'application/xml');
       const out=[];
@@ -235,7 +251,7 @@
       return out;
     }
 
-    /************ KML 解析 ************/
+    /************ KML ************/
     function parseKML(text){
       const doc = new DOMParser().parseFromString(text, 'application/xml');
       const out=[];
@@ -287,8 +303,12 @@
     let rawTrack=[]; // { ts(ms), lon_e6, lat_e6, __gcj? }
     let minTs=null, maxTs=null;
     let bigLayer=null, smallMarkers=[];
-    let canvasLayer=null; // Canvas 回退
+    let canvasLayer=null; // Canvas 点
+    let lineLayer=null;   // 折线
     window.__TT_SQLDB__=null;
+
+    // 配置
+    const MAX_LINE_POINTS = 50000; // 超过则不画折线以避免卡顿
 
     /************ 能力探测（PointCollection 兼容） ************/
     function getPointConsts(){
@@ -300,7 +320,7 @@
       return { sizeSmall, shapeCircle, hasPC };
     }
 
-    /************ Canvas 海量点回退（只画点） ************/
+    /************ Canvas 海量点（只画点） ************/
     class CanvasDots extends BMapGL.Overlay {
       constructor(points, color='#5ab1ff', radius=2){
         super();
@@ -364,15 +384,27 @@
       }
     }
 
-    /************ 统一渲染（只画点） ************/
+    /************ 统一渲染 ************/
     function clearOverlays(){
       if (bigLayer){ map.removeOverlay(bigLayer); bigLayer=null; }
       if (canvasLayer){ map.removeOverlay(canvasLayer); canvasLayer.remove?.(); canvasLayer=null; }
+      if (lineLayer){ map.removeOverlay(lineLayer); lineLayer=null; }
       if (smallMarkers.length){ for (const m of smallMarkers) map.removeOverlay(m); smallMarkers.length=0; }
+    }
+
+    function hexToRGBA(hex, alpha=1){
+      const h=hex.replace('#','');
+      const bigint=parseInt(h,16);
+      const r=(bigint>>16)&255, g=(bigint>>8)&255, b=bigint&255;
+      return `rgba(${r},${g},${b},${alpha})`;
     }
 
     function renderUnified(arr){
       clearOverlays();
+
+      const showPoints = document.getElementById('optShowPoints').checked;
+      const showLine   = document.getElementById('optShowLine').checked;
+      const colorHex   = document.getElementById('pointColor').value || '#5ab1ff';
 
       if (!arr || arr.length===0){
         map.centerAndZoom(new BMapGL.Point(116.404,39.915),12);
@@ -395,42 +427,66 @@
 
       const { sizeSmall, shapeCircle, hasPC } = getPointConsts();
 
-      if (arr.length < 1000){
-        const first = new BMapGL.Marker(pts[0]); first.setTitle("起点"); map.addOverlay(first); smallMarkers.push(first);
-        const firstLabel=new BMapGL.Label("起点",{position:pts[0],offset:new BMapGL.Size(10,-20)});
-        firstLabel.setStyle({color:"#00E0FF",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #00E0FF",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
-        map.addOverlay(firstLabel); smallMarkers.push(firstLabel);
-
-        for (let i=0;i<pts.length;i++){
-          const mk = new BMapGL.Marker(pts[i]);
-          mk.setTitle(`#${i}\n时间: ${tsToLocal(arr[i].ts)}`);
-          map.addOverlay(mk);
-          smallMarkers.push(mk);
+      // 绘制线
+      if (showLine && pts.length>=2){
+        if (pts.length <= MAX_LINE_POINTS){
+          lineLayer = new BMapGL.Polyline(pts, {
+            strokeColor: colorHex,
+            strokeWeight: 3,
+            strokeOpacity: 0.9,
+          });
+          map.addOverlay(lineLayer);
+        } else {
+          const fe=document.getElementById("fileStatus");
+          fe.style.display="block";
+          fe.textContent=`数据量 ${pts.length} 过大，出于性能考虑已跳过折线绘制（阈值 ${MAX_LINE_POINTS}）。`;
         }
-        if (pts.length>=2){
-          const last = new BMapGL.Marker(pts[pts.length-1]); last.setTitle("终点"); map.addOverlay(last); smallMarkers.push(last);
-          const lastLabel=new BMapGL.Label("终点",{position:pts[pts.length-1],offset:new BMapGL.Size(10,-20)});
-          lastLabel.setStyle({color:"#FF4D4F",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #FF4D4F",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
-          map.addOverlay(lastLabel); smallMarkers.push(lastLabel);
-        }
-      } else if (hasPC && sizeSmall!=null && shapeCircle!=null){
-        const opts = { size: sizeSmall, shape: shapeCircle, color: '#5ab1ff' };
-        const pc = new BMapGL.PointCollection(pts, opts);
-        pc.addEventListener('click', e=>{
-          const idx=e.index!=null?e.index:null;
-          if (idx!=null && arr[idx]){
-            const lbl=new BMapGL.Label(tsToLocal(arr[idx].ts), { position: e.point, offset:new BMapGL.Size(10,-20) });
-            lbl.setStyle({color:"#fff",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #30363d",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
-            map.addOverlay(lbl); setTimeout(()=>map.removeOverlay(lbl), 1200);
-          }
-        });
-        map.addOverlay(pc);
-        bigLayer = pc;
-      } else {
-        const dots = new CanvasDots(pts, '#5ab1ff', 2);
-        map.addOverlay(dots);
-        canvasLayer = dots;
       }
+
+      // 绘制点
+      if (showPoints){
+        if (arr.length < 1000){
+          // 小数据：用 CanvasDots 以支持颜色，同时保留起终点标注
+          const dots = new CanvasDots(pts, colorHex, 2.5);
+          map.addOverlay(dots);
+          canvasLayer = dots;
+
+          const first = new BMapGL.Marker(pts[0]); first.setTitle("起点"); map.addOverlay(first); smallMarkers.push(first);
+          const firstLabel=new BMapGL.Label("起点",{position:pts[0],offset:new BMapGL.Size(10,-20)});
+          firstLabel.setStyle({color:"#00E0FF",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #00E0FF",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
+          map.addOverlay(firstLabel); smallMarkers.push(firstLabel);
+
+          if (pts.length>=2){
+            const last = new BMapGL.Marker(pts[pts.length-1]); last.setTitle("终点"); map.addOverlay(last); smallMarkers.push(last);
+            const lastLabel=new BMapGL.Label("终点",{position:pts[pts.length-1],offset:new BMapGL.Size(10,-20)});
+            lastLabel.setStyle({color:"#FF4D4F",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #FF4D4F",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
+            map.addOverlay(lastLabel); smallMarkers.push(lastLabel);
+          }
+        } else if (hasPC && sizeSmall!=null && shapeCircle!=null){
+          const opts = { size: sizeSmall, shape: shapeCircle, color: colorHex };
+          const pc = new BMapGL.PointCollection(pts, opts);
+          pc.addEventListener('click', e=>{
+            const idx=e.index!=null?e.index:null;
+            if (idx!=null && arr[idx]){
+              const lbl=new BMapGL.Label(tsToLocal(arr[idx].ts), { position: e.point, offset:new BMapGL.Size(10,-20) });
+              lbl.setStyle({color:"#fff",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #30363d",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
+              map.addOverlay(lbl); setTimeout(()=>map.removeOverlay(lbl), 1200);
+            }
+          });
+          map.addOverlay(pc);
+          bigLayer = pc;
+        } else {
+          const dots = new CanvasDots(pts, colorHex, 2);
+          map.addOverlay(dots);
+          canvasLayer = dots;
+        }
+      }
+
+      // 统计
+      const count=arr.length, startTxt=(count>0)?tsToLocal(arr[0].ts):"-", endTxt=(count>0)?tsToLocal(arr[count-1].ts):"-";
+      document.getElementById("statsCount").textContent=`点数：${count}`;
+      document.getElementById("statsRange").textContent=`时间范围：${startTxt} → ${endTxt}`;
+      document.getElementById("miniStats").textContent=`${count} · ${startTxt} → ${endTxt}`;
 
       hideLoading();
     }
@@ -446,10 +502,6 @@
         if (s>e){ alert("起始时间不可晚于结束时间"); hideLoading(); return; }
         const arr=rawTrack.filter(p=>p.ts>=s&&p.ts<=e);
         renderUnified(arr);
-        const count=arr.length, startTxt=(count>0)?tsToLocal(arr[0].ts):"-", endTxt=(count>0)?tsToLocal(arr[count-1].ts):"-";
-        document.getElementById("statsCount").textContent=`点数：${count}`;
-        document.getElementById("statsRange").textContent=`时间范围：${startTxt} → ${endTxt}`;
-        document.getElementById("miniStats").textContent=`${count} · ${startTxt} → ${endTxt}`;
       });
     }
 
@@ -499,10 +551,6 @@
           stmt.free();
 
           renderUnified(arr);
-          const count=arr.length, startTxt=(count>0)?tsToLocal(arr[0].ts):"-", endTxt=(count>0)?tsToLocal(arr[count-1].ts):"-";
-          document.getElementById("statsCount").textContent=`点数：${count}`;
-          document.getElementById("statsRange").textContent=`时间范围：${startTxt} → ${endTxt}`;
-          document.getElementById("miniStats").textContent=`${count} · ${startTxt} → ${endTxt}`;
         }catch(err){
           if (stmt) try{ stmt.free(); }catch(_){}
           const fe=document.getElementById("fileError"); fe.style.display="block"; fe.textContent=`SQLite 查询失败：${err.message}`;
@@ -639,7 +687,7 @@
       }
     }
 
-    /************ 文件加载分发：JSON / SQLite / CSV / GPX / KML ************/
+    /************ 文件加载分发 ************/
     async function loadFromFile(file){
       const name=(file?.name||"").toLowerCase();
       try{
@@ -704,6 +752,17 @@
       }
     }
 
+    function persistOpts(){
+      localStorage.setItem('tt_show_points', document.getElementById('optShowPoints').checked ? '1' : '0');
+      localStorage.setItem('tt_show_line',   document.getElementById('optShowLine').checked ? '1' : '0');
+      localStorage.setItem('tt_point_color', document.getElementById('pointColor').value || '#5ab1ff');
+    }
+    function restoreOpts(){
+      const sp = localStorage.getItem('tt_show_points'); if (sp!=null) document.getElementById('optShowPoints').checked = sp==='1';
+      const sl = localStorage.getItem('tt_show_line');   if (sl!=null) document.getElementById('optShowLine').checked   = sl==='1';
+      const pc = localStorage.getItem('tt_point_color'); if (pc) document.getElementById('pointColor').value = pc;
+    }
+
     function init(){
       map=new BMapGL.Map("map",{ enableRotate:false, enableTilt:false });
       map.centerAndZoom(new BMapGL.Point(116.404,39.915),12);
@@ -711,6 +770,7 @@
       map.enableScrollWheelZoom(true);
 
       setPanelCollapsed(localStorage.getItem("tt_panel_collapsed")==="1");
+      restoreOpts();
 
       document.getElementById("togglePanel").addEventListener("click",()=>{
         setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed"));
@@ -719,10 +779,13 @@
         setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed"));
       });
 
-      document.getElementById("applyBtn").addEventListener("click",applyFilter);
-      document.getElementById("resetBtn").addEventListener("click",resetRange);
-      document.getElementById("startInput").addEventListener("change",applyFilter);
-      document.getElementById("endInput").addEventListener("change",applyFilter);
+      document.getElementById("applyBtn").addEventListener("click",()=>{ persistOpts(); applyFilter(); });
+      document.getElementById("resetBtn").addEventListener("click",()=>{ persistOpts(); resetRange(); });
+      document.getElementById("startInput").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
+      document.getElementById("endInput").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
+      document.getElementById("optShowPoints").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
+      document.getElementById("optShowLine").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
+      document.getElementById("pointColor").addEventListener("input",()=>{ persistOpts(); applyFilter(); });
 
       document.getElementById("fileInput").addEventListener("change",(e)=>{ const f=e.target.files?.[0]; if (f) loadFromFile(f); });
       const dz=document.getElementById("dropzone");
