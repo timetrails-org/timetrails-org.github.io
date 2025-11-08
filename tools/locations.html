@@ -2,11 +2,11 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>轨迹预览（时间+坐标；点/线可配，海量点自适应 | CSV/GPX/KML/SQLite）</title>
+  <title>Track Preview</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html, body, #map { width:100%; height:100%; margin:0; padding:0; background:#0f1117; color:#fff; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif; }
-    .panel { position:absolute; z-index:9999; left:12px; top:12px; background:rgba(15,15,15,0.7); border-radius:12px; padding:10px 14px; box-shadow:0 12px 32px rgba(0,0,0,0.6); font-size:13px; line-height:1.4; max-width:380px; backdrop-filter:blur(8px); color:#eee; user-select:none; transition:transform .22s ease, opacity .22s ease, max-height .22s ease, padding .22s ease; }
+    .panel { position:absolute; z-index:9999; left:12px; top:12px; background:rgba(15,15,15,0.7); border-radius:12px; padding:10px 14px; box-shadow:0 12px 32px rgba(0,0,0,0.6); font-size:13px; line-height:1.4; max-width:420px; backdrop-filter:blur(8px); color:#eee; user-select:none; transition:transform .22s ease, opacity .22s ease, max-height .22s ease, padding .22s ease; }
     .panel b { color:#fff; font-weight:600; font-size:13px; }
     .panel-header { display:flex; align-items:center; gap:8px; cursor:default; }
     .panel-title { display:flex; align-items:center; gap:8px; min-width:0; }
@@ -26,6 +26,11 @@
     .fileok { color:#59f; font-size:12px; word-break:break-all; }
     .error { color:#ff6b6b; font-size:12px; white-space:pre-wrap; }
 
+    /* 顶部工具条（语言/主题） */
+    .toolbar { position:absolute; right:12px; top:12px; z-index:10000; display:flex; gap:8px; align-items:center; background:rgba(15,15,15,0.7); padding:6px 10px; border-radius:10px; border:1px solid #2b3138; backdrop-filter:blur(8px); }
+    .toolbar label { font-size:12px; color:#c9d1d9; }
+    .toolbar select { background:#11141a; color:#e6edf3; border:1px solid #30363d; border-radius:8px; padding:4px 8px; }
+
     /* 加载遮罩 */
     .loading { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); z-index: 99999; backdrop-filter: blur(2px); }
     .loading.show { display: flex; }
@@ -41,6 +46,14 @@
     .opts label { display:flex; gap:6px; align-items:center; cursor:pointer; }
   </style>
 
+  <!-- 内联语言清单（可改也可删除并改用 /languages.json） -->
+  <script id="languages-json" type="application/json">
+    [
+      {"code":"zh-Hans","displayName":"简体中文"},
+      {"code":"en","displayName":"English"}
+    ]
+  </script>
+
   <!-- sql.js（SQLite WASM） -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
 
@@ -49,15 +62,10 @@
     (function (g) {
       const DEFAULTS = { ak: "", v: "1.0", type: "webgl", timeout: 15000, retries: 1 };
       let _loading = null;
-
       function inject(src, onload, onerror) {
         const s = document.createElement("script");
-        s.src = src;
-        s.async = true;
-        s.defer = true;
-        s.onload = onload;
-        s.onerror = onerror;
-        document.head.appendChild(s);
+        s.src = src; s.async = true; s.defer = true;
+        s.onload = onload; s.onerror = onerror; document.head.appendChild(s);
       }
       function buildUrl({ ak, v, type, cb }) {
         const params = new URLSearchParams({ ak, v, type, callback: cb });
@@ -66,22 +74,17 @@
       function waitReady(timeout) {
         return new Promise((res, rej) => {
           const t = setTimeout(() => rej(new Error("BMapGL load timeout")), timeout);
-          (function tick() {
-            if (g.BMapGL && g.BMapGL.Map) { clearTimeout(t); res(); }
-            else { requestAnimationFrame(tick); }
-          })();
+          (function tick(){ if (g.BMapGL && g.BMapGL.Map){ clearTimeout(t); res(); } else { requestAnimationFrame(tick); } })();
         });
       }
       function loadOnce(opts) {
         const cfg = Object.assign({}, DEFAULTS, opts || {});
         if (!cfg.ak) return Promise.reject(new Error("Missing Baidu Map AK"));
         if (_loading) return _loading;
-
         _loading = new Promise((resolve, reject) => {
           let tries = 0;
           const cb = "__BMAPGL_CB_" + Math.random().toString(36).slice(2);
-          g[cb] = function () { /* no-op callback required by API */ };
-
+          g[cb] = function () {};
           const attempt = () => {
             tries++;
             inject(
@@ -96,10 +99,8 @@
           };
           attempt();
         });
-
         return _loading;
       }
-
       g.loadBMapGL = loadOnce;
     })(window);
   </script>
@@ -108,62 +109,66 @@
   <script id="trackData" type="application/json">[]</script>
 </head>
 <body>
+<!-- 顶部工具条：语言切换 -->
+<div class="toolbar" role="group" aria-label="toolbar">
+  <label for="lang-switcher" data-i18n="tools.header.lang">语言</label>
+  <select id="lang-switcher" aria-label="language switcher"></select>
+</div>
+
 <div id="map"></div>
 
 <div class="panel" id="infoPanel">
-  <div class="panel-header" title="双击标题栏可折叠/展开">
+  <div class="panel-header" data-i18n-title="tools.locations.panelHeaderTooltip" title="">
     <div class="panel-title">
-      <b>轨迹点预览</b>
+      <b data-i18n="tools.locations.panelTitle">轨迹点预览</b>
       <span id="miniStats" class="mini">—</span>
     </div>
-    <button id="togglePanel" class="toggle" aria-expanded="false">收起</button>
+    <button id="togglePanel" class="toggle" aria-expanded="false" data-i18n="tools.locations.fold">收起</button>
   </div>
 
   <div class="content">
     <div class="row">
       <div class="btns">
-        <label class="btn" for="fileInput">选择文件（.json / .db / .sqlite / .csv / .gpx / .kml）</label>
+        <label class="btn" for="fileInput" data-i18n="tools.locations.chooseFile">选择文件（.json / .db / .sqlite / .csv / .gpx / .kml）</label>
       </div>
       <input id="fileInput" type="file"
              accept=".json,application/json,.db,.sqlite,application/octet-stream,.csv,text/csv,.gpx,application/gpx+xml,.kml,application/vnd.google-earth.kml+xml"
              style="display:none" />
-      <div class="dropzone" id="dropzone">拖拽 JSON / SQLite / CSV / GPX / KML 文件到这里加载</div>
-      <div class="muted">
-        JSON/CSV：需要时间列与经纬度列；GPX/KML 自动识别；SQLite 自动探测表与列。<br/>
-        坐标：默认视为 WGS84；如含 <code>gcj02*</code> 或 <code>isMarsLocation</code> 将按国测局坐标纠偏。
+      <div class="dropzone" id="dropzone" data-i18n="tools.locations.dropHint">拖拽 JSON / SQLite / CSV / GPX / KML 文件到这里加载</div>
+      <div class="muted" data-i18n="tools.locations.hintFormats">
+        JSON/CSV：需要时间与经纬度；GPX/KML 自动识别；SQLite 自动探测表与列。坐标默认 WGS84；若含 gcj02* 或 isMarsLocation 则按 GCJ-02。
       </div>
       <div id="fileStatus" class="fileok" style="display:none;"></div>
       <div id="fileError" class="error" style="display:none;"></div>
     </div>
 
     <div class="row">
-      <label>时间片段（本地时区）：</label>
+      <label data-i18n="tools.locations.timeSegmentLabel">时间片段（本地时区）：</label>
       <input id="startInput" type="datetime-local" step="1" />
       <input id="endInput" type="datetime-local" step="1" />
       <div class="btns">
-        <button id="applyBtn">应用筛选</button>
-        <button id="resetBtn" title="重置为全量区间">重置</button>
+        <button id="applyBtn" data-i18n="tools.locations.apply">应用筛选</button>
+        <button id="resetBtn" title="" data-i18n="tools.locations.reset">重置</button>
       </div>
     </div>
 
-    <!-- 新增：显示方式与颜色配置 -->
     <div class="row">
       <div class="opts">
         <div class="seg">
-          <label><input type="checkbox" id="optShowPoints" checked> 显示点</label>
-          <label><input type="checkbox" id="optShowLine"> 连成线</label>
+          <label><input type="checkbox" id="optShowPoints" checked> <span data-i18n="tools.locations.showPoints">显示点</span></label>
+          <label><input type="checkbox" id="optShowLine"> <span data-i18n="tools.locations.connectLine">连成线</span></label>
         </div>
         <div class="seg">
-          <span>颜色</span>
+          <span data-i18n="tools.locations.color">颜色</span>
           <input type="color" id="pointColor" value="#5ab1ff" style="width:48px; height:32px; padding:0; border-radius:8px;">
         </div>
       </div>
-      <div class="muted">≥1000 点优先使用 PointCollection；若不可用自动回退 Canvas。折线在超大数据量时会自动限制。</div>
+      <div class="muted" data-i18n="tools.locations.bigDataHint">≥1000 点优先使用 PointCollection；不可用则回退 Canvas。超大数据量时会限制折线。</div>
     </div>
 
     <div class="row">
-      <div id="statsCount">点数：-</div>
-      <div id="statsRange">时间范围：-</div>
+      <div id="statsCount">-</div>
+      <div id="statsRange">-</div>
     </div>
   </div>
 </div>
@@ -171,24 +176,133 @@
 <div id="loading" class="loading" aria-live="polite" aria-busy="true">
   <div>
     <div class="spinner"></div>
-    <div id="loadingText" class="loading-text">加载中…</div>
+    <div id="loadingText" class="loading-text">Loading…</div>
   </div>
 </div>
 
 <script>
-  /************ 小工具（与地图无关的可以预先定义） ************/
-  function showLoading(msg){ const el=document.getElementById("loading"); document.getElementById("loadingText").textContent=msg||"加载中…"; el.classList.add("show"); }
-  function hideLoading(){ document.getElementById("loading").classList.remove("show"); }
+  /************ i18n：极简本地化（支持 /i18n/ 与内联语言清单） ************/
+  const I18N_DIR        = "/i18n";
+  const FALLBACK_CODE   = "en";
+  const STORAGE_KEY     = "timetrails.lang";
+  let LANGUAGES = [];             // [{code, displayName}]
+  let currentLang = FALLBACK_CODE;
+  let dict = {};                  // 当前词典
+  let dictFallback = {};          // 英文回退
+
+  const qs  = (s, r = document) => r.querySelector(s);
+  const qsa = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+  async function fetchJson(url) {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Fetch failed: ${url} ${res.status}`);
+    return res.json();
+  }
+  async function loadLanguagesList() {
+    // 优先从内联 script 读取
+    const inline = qs("#languages-json");
+    if (inline) {
+      try { return JSON.parse(inline.textContent.trim() || "[]"); }
+      catch(e){ console.warn("Inline languages-json parse failed:", e); }
+    }
+    // 回退从 /languages.json 获取
+    try { return await fetchJson("/languages.json"); }
+    catch(e){ console.warn("No /languages.json, fallback to en only."); return [{ code:"en", displayName:"English" }]; }
+  }
+  async function loadDict(code) {
+    if (!Object.keys(dictFallback).length) {
+      try { dictFallback = await fetchJson(`${I18N_DIR}/${FALLBACK_CODE}.json`); }
+      catch(e){ console.error("[i18n] Fallback(en) dict load failed:", e); dictFallback = {}; }
+    }
+    try { return await fetchJson(`${I18N_DIR}/${code}.json`); }
+    catch(e){ console.warn(`[i18n] ${code} missing, fallback to ${FALLBACK_CODE}`); return dictFallback; }
+  }
+  function getNested(obj, path) {
+    return path.split(".").reduce((o, k) => (o && o[k] != null ? o[k] : undefined), obj);
+  }
+  function t(key, vars) {
+    let txt = getNested(dict, key);
+    if (txt == null) txt = getNested(dictFallback, key) ?? key;
+    if (vars && typeof txt === "string") {
+      for (const k in vars) txt = txt.replace(new RegExp(`\\{${k}\\}`, "g"), String(vars[k]));
+    }
+    return txt;
+  }
+  function applyI18nToDOM() {
+    // 普通文本
+    qsa("[data-i18n]").forEach(el => {
+      const key = el.getAttribute("data-i18n");
+      el.textContent = t(key);
+    });
+    // title/placeholder 等属性型
+    qsa("[data-i18n-title]").forEach(el => {
+      const key = el.getAttribute("data-i18n-title");
+      el.title = t(key);
+    });
+    qsa("[data-i18n-ph]").forEach(el => {
+      const key = el.getAttribute("data-i18n-ph");
+      el.placeholder = t(key);
+    });
+    document.documentElement.setAttribute("lang", currentLang);
+    document.title = t("tools.locations.pageTitle");
+    qs("#loadingText").textContent = t("tools.locations.loading");
+    // 折叠按钮文案根据状态处理
+    const btn = qs("#togglePanel");
+    if (btn) btn.textContent = qs("#infoPanel").classList.contains("collapsed") ? t("tools.locations.unfold") : t("tools.locations.fold");
+  }
+  function detectInitialLang() {
+    const url = new URL(location.href);
+    const fromQuery = url.searchParams.get("lang");
+    const fromStore = localStorage.getItem(STORAGE_KEY);
+    const browser = (navigator.language || "").toLowerCase();
+    const candidates = [fromStore, fromQuery, browser, FALLBACK_CODE].filter(Boolean);
+    for (const c of candidates) {
+      const exact = LANGUAGES.find(l => l.code.toLowerCase() === c.toLowerCase());
+      if (exact) return exact.code;
+      const base = c.split("-")[0];
+      const baseHit = LANGUAGES.find(l => l.code.toLowerCase() === base);
+      if (baseHit) return baseHit.code;
+    }
+    return FALLBACK_CODE;
+  }
+  function populateLangSwitcher() {
+    const sel = qs("#lang-switcher"); if (!sel) return;
+    sel.innerHTML = "";
+    LANGUAGES.forEach(({ code, displayName }) => {
+      const opt = document.createElement("option");
+      opt.value = code; opt.textContent = displayName || code; sel.appendChild(opt);
+    });
+    sel.value = currentLang;
+    sel.addEventListener("change", async () => { await setLanguage(sel.value); });
+  }
+  async function setLanguage(code) {
+    currentLang = code; localStorage.setItem(STORAGE_KEY, code);
+    dict = await loadDict(code);
+    applyI18nToDOM();
+    const url = new URL(location.href);
+    url.searchParams.set("lang", code);
+    history.replaceState({}, "", url.toString());
+  }
+  // 启动 i18n
+  (async function initI18n(){
+    LANGUAGES = await loadLanguagesList();
+    currentLang = detectInitialLang();
+    await setLanguage(currentLang);
+    populateLangSwitcher();
+  })();
+
+  /************ 小工具（与地图无关） ************/
+  function showLoading(msg){ const el=qs("#loading"); qs("#loadingText").textContent= msg || t("tools.locations.loading"); el.classList.add("show"); }
+  function hideLoading(){ qs("#loading").classList.remove("show"); }
   const pad2=n=>n<10?('0'+n):''+n;
   function tsToLocal(ts){const d=new Date(ts);return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;}
   function tsToLocalInput(ts){const d=new Date(ts);return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;}
   function inputToTs(val){ if(!val) return null; const t=new Date(val).getTime(); return Number.isFinite(t)?t:null; }
   const num = x => (x==null || x==="") ? NaN : Number(x);
 
-  /************ 主应用逻辑封装：等 BMapGL 就绪后再执行 ************/
+  /************ 主应用逻辑：等 BMapGL 就绪后再执行 ************/
   function runApp() {
-
-    /************ 坐标转换（依赖 Math，不依赖 BMapGL） ************/
+    // —— 坐标转换 —— //
     function _outOfChina(lng, lat){return(lng<72.004||lng>137.8347||lat<0.8293||lat>55.8271);}
     function _transformLat(lng,lat){let ret=-100+2*lng+3*lat+0.2*lat*lat+0.1*lng*lat+0.2*Math.sqrt(Math.abs(lng));ret+=(20*Math.sin(6*lng*Math.PI)+20*Math.sin(2*lng*Math.PI))*2/3;ret+=(20*Math.sin(lat*Math.PI)+40*Math.sin(lat/3*Math.PI))*2/3;ret+=(160*Math.sin(lat/12*Math.PI)+320*Math.sin(lat*Math.PI/30))*2/3;return ret;}
     function _transformLng(lng,lat){let ret=300+lng+2*lat+0.1*lng*lng+0.1*lng*lat+0.1*Math.sqrt(Math.abs(lng));ret+=(20*Math.sin(6*lng*Math.PI)+20*Math.sin(2*lng*Math.PI))*2/3;ret+=(20*Math.sin(lng*Math.PI)+40*Math.sin(lng/3*Math.PI))*2/3;ret+=(150*Math.sin(lng/12*Math.PI)+300*Math.sin(lng/30*Math.PI))*2/3;return ret;}
@@ -196,7 +310,7 @@
     function gcj02ToBd09(lng,lat){const x=lng,y=lat; const z=Math.sqrt(x*x+y*y)+0.00002*Math.sin(y*Math.PI*3000/180); const th=Math.atan2(y,x)+0.000003*Math.cos(x*Math.PI*3000/180); return [z*Math.cos(th)+0.0065, z*Math.sin(th)+0.006];}
     function wgs84ToBd09(lng,lat){const [glng,glat]=wgs84ToGcj02(lng,lat); return gcj02ToBd09(glng,glat);}
 
-    /************ 兼容解析（JSON/CSV/GPX/KML）************/
+    // —— 解析 —— //
     function parseTsFlexible(p){
       if (Number.isFinite(p.ts)) return p.ts<1e12?p.ts*1000:p.ts;
       if (Number.isFinite(p.timestamp)) return p.timestamp<1e12?p.timestamp*1000:p.timestamp;
@@ -215,17 +329,13 @@
       if (Number.isFinite(p.lng) && Number.isFinite(p.lat)) return {lng:+p.lng, lat:+p.lat, gcj:false};
       return null;
     }
-
     function splitCSVLine(line){
       const out=[]; let cur=''; let inQ=false;
       for (let i=0;i<line.length;i++){
         const ch=line[i];
-        if (ch==='\"'){
-          if (inQ && line[i+1]==='\"'){ cur+='\"'; i++; }
-          else inQ=!inQ;
-        } else if (ch===',' && !inQ){
-          out.push(cur); cur='';
-        } else { cur+=ch; }
+        if (ch==='\"'){ if (inQ && line[i+1]==='\"'){ cur+='\"'; i++; } else inQ=!inQ; }
+        else if (ch===',' && !inQ){ out.push(cur); cur=''; }
+        else { cur+=ch; }
       }
       out.push(cur);
       return out.map(s=>s.trim());
@@ -235,10 +345,8 @@
       if (lines.length===0) return [];
       const header=splitCSVLine(lines[0]).map(h=>h.trim().toLowerCase());
       const idx = nameList=>{
-        for (const n of nameList){
-          const k=n.toLowerCase(); const j=header.indexOf(k);
-          if (j>=0) return j;
-        } return -1;
+        for (const n of nameList){ const k=n.toLowerCase(); const j=header.indexOf(k); if (j>=0) return j; }
+        return -1;
       };
       const tidx=idx(['timestamp','time_ms','time','ts','times','datetime','date','timestring']);
       const lonIdx=idx(['longitude','lon','lng','lon_e6']);
@@ -255,18 +363,15 @@
         if (tidx>=0){
           const tv = cols[tidx];
           const n = Number(tv);
-          if (Number.isFinite(n)){
-            ts = (n<1e12 ? n*1000 : n);
-          }else{
+          if (Number.isFinite(n)) ts = (n<1e12 ? n*1000 : n);
+          else{
             const t2=new Date(String(tv).replace(' ','T')).getTime();
             if (Number.isFinite(t2)) ts=t2;
           }
         }
         if (!Number.isFinite(ts)) ts = Date.now() + i;
         const useDeg = Math.abs(lonV)<=180 && Math.abs(latV)<=90;
-        const obj = useDeg
-          ? { ts, longitude: lonV, latitude: latV }
-          : { ts, lon_e6: Math.round(lonV), lat_e6: Math.round(latV) };
+        const obj = useDeg ? { ts, longitude: lonV, latitude: latV } : { ts, lon_e6: Math.round(lonV), lat_e6: Math.round(latV) };
         if (gcjIdx>=0){
           const flag=cols[gcjIdx]; const b = String(flag).trim();
           if (b==='1' || /^true$/i.test(b)) obj.gcj = true;
@@ -275,7 +380,6 @@
       }
       return out;
     }
-
     function parseGPX(text){
       const doc = new DOMParser().parseFromString(text, 'application/xml');
       const out=[];
@@ -287,9 +391,7 @@
         const t = pick(p.getElementsByTagName('time')[0]||null);
         const ts = Number.isFinite(Number(t)) ? (Number(t)<1e12?Number(t)*1000:Number(t)) : new Date(t).getTime();
         const tsFinal = Number.isFinite(ts)? ts : (Date.now()+out.length);
-        if (Number.isFinite(lat) && Number.isFinite(lon)){
-          out.push({ ts: tsFinal, latitude: lat, longitude: lon });
-        }
+        if (Number.isFinite(lat) && Number.isFinite(lon)) out.push({ ts: tsFinal, latitude: lat, longitude: lon });
       }
       const wpts = Array.from(doc.getElementsByTagName('wpt'));
       for (const p of wpts){
@@ -299,18 +401,14 @@
         const t = tEl ? tEl.textContent.trim() : '';
         const ts = Number.isFinite(Number(t)) ? (Number(t)<1e12?Number(t)*1000:Number(t)) : new Date(t).getTime();
         const tsFinal = Number.isFinite(ts)? ts : (Date.now()+out.length);
-        if (Number.isFinite(lat) && Number.isFinite(lon)){
-          out.push({ ts: tsFinal, latitude: lat, longitude: lon });
-        }
+        if (Number.isFinite(lat) && Number.isFinite(lon)) out.push({ ts: tsFinal, latitude: lat, longitude: lon });
       }
       return out;
     }
-
     function parseKML(text){
       const doc = new DOMParser().parseFromString(text, 'application/xml');
       const out=[];
       const txt = el=> (el? el.textContent.trim() : '');
-
       const tracks = doc.getElementsByTagNameNS('*','Track');
       for (const trk of tracks){
         const when = Array.from(trk.getElementsByTagName('when')).map(e=>txt(e));
@@ -318,7 +416,7 @@
         const m = Math.min(when.length, coords.length);
         for (let i=0;i<m;i++){
           const ts = new Date(when[i]).getTime();
-          const parts = coords[i].split(/\s+/).map(Number); // lon lat alt
+          const parts = coords[i].split(/\s+/).map(Number);
           const lon=parts[0], lat=parts[1];
           if (Number.isFinite(lon)&&Number.isFinite(lat)){
             const tsFinal = Number.isFinite(ts)?ts:(Date.now()+out.length);
@@ -332,7 +430,7 @@
         if (!coordNode) continue;
         const list = coordNode.textContent.trim().split(/\s+/);
         for (let i=0;i<list.length;i++){
-          const parts = list[i].split(',').map(Number); // lon,lat,alt
+          const parts = list[i].split(',').map(Number);
           const lon=parts[0], lat=parts[1];
           if (Number.isFinite(lon)&&Number.isFinite(lat)){
             out.push({ ts: Date.now()+out.length, longitude: lon, latitude: lat });
@@ -352,7 +450,7 @@
       return out;
     }
 
-    /************ 全局状态 ************/
+    // —— 全局状态 —— //
     let map=null;
     let rawTrack=[]; // { ts(ms), lon_e6, lat_e6, __gcj? }
     let minTs=null, maxTs=null;
@@ -361,10 +459,8 @@
     let lineLayer=null;   // 折线
     window.__TT_SQLDB__=null;
 
-    // 配置
-    const MAX_LINE_POINTS = 50000; // 超过则不画折线以避免卡顿
+    const MAX_LINE_POINTS = 50000;
 
-    /************ 能力探测（PointCollection 兼容） ************/
     function getPointConsts(){
       const sizeSmall = (window.BMAP_POINT_SIZE_SMALL!==undefined) ? window.BMAP_POINT_SIZE_SMALL
                         : (BMapGL && BMapGL.PointSizeType && BMapGL.PointSizeType.SMALL) || 1;
@@ -374,25 +470,13 @@
       return { sizeSmall, shapeCircle, hasPC };
     }
 
-    /************ Canvas 海量点（只画点） ************/
     class CanvasDots extends BMapGL.Overlay {
-      constructor(points, color='#5ab1ff', radius=2){
-        super();
-        this.points = points; // BMapGL.Point[]
-        this.color = color;
-        this.radius = radius;
-        this._map = null;
-        this._canvas = null;
-        this._ctx = null;
-        this._bindedDraw = this.draw.bind(this);
-      }
+      constructor(points, color='#5ab1ff', radius=2){ super(); this.points=points; this.color=color; this.radius=radius; this._map=null; this._canvas=null; this._ctx=null; this._bindedDraw=this.draw.bind(this); }
       initialize(map){
-        this._map = map;
-        const canvas = this._canvas = document.createElement('canvas');
-        canvas.style.position = 'absolute';
-        canvas.style.left = 0; canvas.style.top = 0;
-        canvas.style.pointerEvents = 'none';
-        this._ctx = canvas.getContext('2d');
+        this._map=map;
+        const canvas=this._canvas=document.createElement('canvas');
+        canvas.style.position='absolute'; canvas.style.left=0; canvas.style.top=0; canvas.style.pointerEvents='none';
+        this._ctx=canvas.getContext('2d');
         map.getPanes().labelPane.appendChild(canvas);
         map.addEventListener('zoomend', this._bindedDraw);
         map.addEventListener('moveend', this._bindedDraw);
@@ -401,32 +485,31 @@
         return canvas;
       }
       _syncSize(){
-        const sz = this._map.getSize();
-        const ratio = window.devicePixelRatio || 1;
-        this._canvas.width = Math.round(sz.width * ratio);
-        this._canvas.height = Math.round(sz.height * ratio);
-        this._canvas.style.width = sz.width + 'px';
-        this._canvas.style.height = sz.height + 'px';
+        const sz=this._map.getSize();
+        const ratio=window.devicePixelRatio||1;
+        this._canvas.width=Math.round(sz.width*ratio);
+        this._canvas.height=Math.round(sz.height*ratio);
+        this._canvas.style.width=sz.width+'px';
+        this._canvas.style.height=sz.height+'px';
         this._ctx.setTransform(ratio,0,0,ratio,0,0);
       }
       draw(){
         if (!this._map || !this._ctx) return;
         this._syncSize();
-        const ctx = this._ctx;
-        const radius = this.radius;
+        const ctx=this._ctx; const radius=this.radius;
         ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
-        ctx.fillStyle = this.color;
-        const bounds = this._map.getBounds();
+        ctx.fillStyle=this.color;
+        const bounds=this._map.getBounds();
         for (let i=0;i<this.points.length;i++){
-          const p = this.points[i];
+          const p=this.points[i];
           if (!bounds.containsPoint(p)) continue;
-          const pix = this._map.pointToPixel(p);
+          const pix=this._map.pointToPixel(p);
           ctx.beginPath();
           ctx.arc(pix.x, pix.y, radius, 0, Math.PI*2);
           ctx.fill();
         }
       }
-      setPoints(points){ this.points = points || []; this.draw(); }
+      setPoints(points){ this.points=points||[]; this.draw(); }
       setStyle({color, radius}){ if (color) this.color=color; if (radius) this.radius=radius; this.draw(); }
       remove(){
         if (!this._map) return;
@@ -434,11 +517,10 @@
         this._map.removeEventListener('moveend', this._bindedDraw);
         this._map.removeEventListener('resize', this._bindedDraw);
         if (this._canvas && this._canvas.parentNode) this._canvas.parentNode.removeChild(this._canvas);
-        this._canvas = null; this._ctx = null; this._map = null;
+        this._canvas=null; this._ctx=null; this._map=null;
       }
     }
 
-    /************ 统一渲染 ************/
     function clearOverlays(){
       if (bigLayer){ map.removeOverlay(bigLayer); bigLayer=null; }
       if (canvasLayer){ map.removeOverlay(canvasLayer); canvasLayer.remove?.(); canvasLayer=null; }
@@ -448,16 +530,15 @@
 
     function renderUnified(arr){
       clearOverlays();
-
-      const showPoints = document.getElementById('optShowPoints').checked;
-      const showLine   = document.getElementById('optShowLine').checked;
-      const colorHex   = document.getElementById('pointColor').value || '#5ab1ff';
+      const showPoints = qs('#optShowPoints').checked;
+      const showLine   = qs('#optShowLine').checked;
+      const colorHex   = qs('#pointColor').value || '#5ab1ff';
 
       if (!arr || arr.length===0){
         map.centerAndZoom(new BMapGL.Point(116.404,39.915),12);
-        document.getElementById("statsCount").textContent=`点数：0`;
-        document.getElementById("statsRange").textContent=`时间范围：-`;
-        document.getElementById("miniStats").textContent=`0 · —`;
+        qs("#statsCount").textContent = t("tools.locations.statsCount", { count: 0 });
+        qs("#statsRange").textContent = t("tools.locations.statsRange", { start: "—", end: "—" });
+        qs("#miniStats").textContent  = t("tools.locations.miniStats", { count: 0, start: "—", end: "—" });
         hideLoading(); return;
       }
 
@@ -474,38 +555,32 @@
 
       const { sizeSmall, shapeCircle, hasPC } = getPointConsts();
 
-      // 绘制线
+      // 折线
       if (showLine && pts.length>=2){
         if (pts.length <= MAX_LINE_POINTS){
-          lineLayer = new BMapGL.Polyline(pts, {
-            strokeColor: colorHex,
-            strokeWeight: 3,
-            strokeOpacity: 0.9,
-          });
+          lineLayer = new BMapGL.Polyline(pts, { strokeColor: colorHex, strokeWeight: 3, strokeOpacity: 0.9 });
           map.addOverlay(lineLayer);
         } else {
-          const fe=document.getElementById("fileStatus");
+          const fe=qs("#fileStatus");
           fe.style.display="block";
-          fe.textContent=`数据量 ${pts.length} 过大，出于性能考虑已跳过折线绘制（阈值 ${MAX_LINE_POINTS}）。`;
+          fe.textContent=t("tools.locations.skipPolyline", { n: pts.length, limit: MAX_LINE_POINTS });
         }
       }
 
-      // 绘制点
+      // 点
       if (showPoints){
         if (arr.length < 1000){
-          // 小数据：用 CanvasDots 以支持颜色，同时保留起终点标注
           const dots = new CanvasDots(pts, colorHex, 2.5);
-          map.addOverlay(dots);
-          canvasLayer = dots;
+          map.addOverlay(dots); canvasLayer = dots;
 
-          const first = new BMapGL.Marker(pts[0]); first.setTitle("起点"); map.addOverlay(first); smallMarkers.push(first);
-          const firstLabel=new BMapGL.Label("起点",{position:pts[0],offset:new BMapGL.Size(10,-20)});
+          const first = new BMapGL.Marker(pts[0]); first.setTitle(t("tools.locations.startPoint")); map.addOverlay(first); smallMarkers.push(first);
+          const firstLabel=new BMapGL.Label(t("tools.locations.startPoint"),{position:pts[0],offset:new BMapGL.Size(10,-20)});
           firstLabel.setStyle({color:"#00E0FF",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #00E0FF",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
           map.addOverlay(firstLabel); smallMarkers.push(firstLabel);
 
           if (pts.length>=2){
-            const last = new BMapGL.Marker(pts[pts.length-1]); last.setTitle("终点"); map.addOverlay(last); smallMarkers.push(last);
-            const lastLabel=new BMapGL.Label("终点",{position:pts[pts.length-1],offset:new BMapGL.Size(10,-20)});
+            const last = new BMapGL.Marker(pts[pts.length-1]); last.setTitle(t("tools.locations.endPoint")); map.addOverlay(last); smallMarkers.push(last);
+            const lastLabel=new BMapGL.Label(t("tools.locations.endPoint"),{position:pts[pts.length-1],offset:new BMapGL.Size(10,-20)});
             lastLabel.setStyle({color:"#FF4D4F",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #FF4D4F",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
             map.addOverlay(lastLabel); smallMarkers.push(lastLabel);
           }
@@ -520,47 +595,42 @@
               map.addOverlay(lbl); setTimeout(()=>map.removeOverlay(lbl), 1200);
             }
           });
-          map.addOverlay(pc);
-          bigLayer = pc;
+          map.addOverlay(pc); bigLayer = pc;
         } else {
           const dots = new CanvasDots(pts, colorHex, 2);
-          map.addOverlay(dots);
-          canvasLayer = dots;
+          map.addOverlay(dots); canvasLayer = dots;
         }
       }
 
-      // 统计
-      const count=arr.length, startTxt=(count>0)?tsToLocal(arr[0].ts):"-", endTxt=(count>0)?tsToLocal(arr[count-1].ts):"-";
-      document.getElementById("statsCount").textContent=`点数：${count}`;
-      document.getElementById("statsRange").textContent=`时间范围：${startTxt} → ${endTxt}`;
-      document.getElementById("miniStats").textContent=`${count} · ${startTxt} → ${endTxt}`;
+      const count=arr.length, startTxt= tsToLocal(arr[0].ts), endTxt= tsToLocal(arr[count-1].ts);
+      qs("#statsCount").textContent = t("tools.locations.statsCount", { count });
+      qs("#statsRange").textContent = t("tools.locations.statsRange", { start: startTxt, end: endTxt });
+      qs("#miniStats").textContent  = t("tools.locations.miniStats", { count, start: startTxt, end: endTxt });
 
       hideLoading();
     }
 
-    /************ 过滤（JSON） ************/
     function applyFilter_JSON(){
-      showLoading("筛选并渲染中…");
+      showLoading(t("tools.locations.loadingFilter"));
       requestAnimationFrame(()=>{
-        const sTs=inputToTs(document.getElementById("startInput").value);
-        const eTs=inputToTs(document.getElementById("endInput").value);
+        const sTs=inputToTs(qs("#startInput").value);
+        const eTs=inputToTs(qs("#endInput").value);
         const s=(sTs==null)?minTs:sTs;
         const e=(eTs==null)?maxTs:eTs;
-        if (s>e){ alert("起始时间不可晚于结束时间"); hideLoading(); return; }
+        if (s>e){ alert(t("tools.locations.errStartAfterEnd")); hideLoading(); return; }
         const arr=rawTrack.filter(p=>p.ts>=s&&p.ts<=e);
         renderUnified(arr);
       });
     }
 
-    /************ 过滤（DB） ************/
     function applyFilter_DB(){
       const sess=window.__TT_SQLDB__; if (!sess){ applyFilter_JSON(); return; }
-      showLoading("数据库查询与渲染中…");
+      showLoading(t("tools.locations.loadingDB"));
       requestAnimationFrame(()=>{
-        const sTs=inputToTs(document.getElementById("startInput").value);
-        const eTs=inputToTs(document.getElementById("endInput").value);
+        const sTs=inputToTs(qs("#startInput").value);
+        const eTs=inputToTs(qs("#endInput").value);
         const s=(sTs==null)?minTs:sTs, e=(eTs==null)?maxTs:eTs;
-        if (s>e){ alert("起始时间不可晚于结束时间"); hideLoading(); return; }
+        if (s>e){ alert(t("tools.locations.errStartAfterEnd")); hideLoading(); return; }
 
         const { db, table, tsCol, lonCol, latCol, gcjLatCol, gcjLonCol, isMarsCol, tsIsMs } = sess;
         const qS = tsIsMs ? Math.floor(s) : Math.floor(s/1000);
@@ -596,24 +666,22 @@
             arr.push({ ts, lon_e6, lat_e6, __gcj:isGcj });
           }
           stmt.free();
-
           renderUnified(arr);
         }catch(err){
           if (stmt) try{ stmt.free(); }catch(_){}
-          const fe=document.getElementById("fileError"); fe.style.display="block"; fe.textContent=`SQLite 查询失败：${err.message}`;
+          const fe=qs("#fileError"); fe.style.display="block"; fe.textContent=`${t("tools.locations.errSQLiteQuery", { msg: err.message })}`;
           console.error(err); renderUnified([]);
         }
       });
     }
 
     function applyFilter(){ if (window.__TT_SQLDB__) applyFilter_DB(); else applyFilter_JSON(); }
-    function resetRange(){ document.getElementById("startInput").value=tsToLocalInput(minTs); document.getElementById("endInput").value=tsToLocalInput(maxTs); applyFilter(); }
+    function resetRange(){ qs("#startInput").value=tsToLocalInput(minTs); qs("#endInput").value=tsToLocalInput(maxTs); applyFilter(); }
 
-    /************ 数据加载（仅保留时间+坐标） ************/
-    function setTrackData(arr, sourceLabel="内联/JSON"){
-      showLoading("解析数据…");
+    function setTrackData(arr, sourceLabel){
+      showLoading(t("tools.locations.parsing"));
       window.__TT_SQLDB__=null;
-      if (!Array.isArray(arr)) { hideLoading(); throw new Error("数据需为数组"); }
+      if (!Array.isArray(arr)) { hideLoading(); throw new Error("array required"); }
       const cleaned=[];
       for (const p of arr){
         const ts=parseTsFlexible(p), deg=pickDegFlexible(p);
@@ -624,12 +692,12 @@
       if (cleaned.length>0){ minTs=cleaned[0].ts; maxTs=cleaned[cleaned.length-1].ts; }
       else { const now=Date.now(); minTs=now-3600_000; maxTs=now; }
 
-      const fileStatus=document.getElementById("fileStatus");
+      const fileStatus=qs("#fileStatus");
       fileStatus.style.display="block";
-      fileStatus.textContent=`已加载（${sourceLabel}）：${cleaned.length} 条`;
-      document.getElementById("fileError").style.display="none";
+      fileStatus.textContent=t("tools.locations.loaded", { source: (sourceLabel || t("tools.locations.srcInline")), n: cleaned.length });
+      qs("#fileError").style.display="none";
 
-      const s=document.getElementById("startInput"), e=document.getElementById("endInput");
+      const s=qs("#startInput"), e=qs("#endInput");
       s.min=tsToLocalInput(minTs); s.max=tsToLocalInput(maxTs);
       e.min=tsToLocalInput(minTs); e.max=tsToLocalInput(maxTs);
       s.value=tsToLocalInput(minTs); e.value=tsToLocalInput(maxTs);
@@ -639,10 +707,10 @@
     }
 
     function loadFromInlineScript(){
-      const node=document.getElementById('trackData');
+      const node=qs('#trackData');
       const rawText=node.textContent.trim();
-      try{ setTrackData(JSON.parse(rawText||"[]"), "内联 trackData"); }
-      catch(e){ const fe=document.getElementById("fileError"); fe.style.display="block"; fe.textContent=`内联 JSON 解析失败：${e.message}`; hideLoading(); }
+      try{ setTrackData(JSON.parse(rawText||"[]"), t("tools.locations.srcInline")); }
+      catch(e){ const fe=qs("#fileError"); fe.style.display="block"; fe.textContent=t("tools.locations.errInlineJSON", { msg: e.message }); hideLoading(); }
     }
 
     // sql.js init once
@@ -655,10 +723,10 @@
     }
 
     async function loadFromSQLite(file){
-      const fileError=document.getElementById("fileError");
-      const fileStatus=document.getElementById("fileStatus");
+      const fileError=qs("#fileError");
+      const fileStatus=qs("#fileStatus");
       fileError.style.display="none"; fileStatus.style.display="none";
-      showLoading("加载 SQLite…");
+      showLoading(t("tools.locations.loadingDB"));
       try{
         const SQL=await initSqlJsOnce();
         const buf=new Uint8Array(await file.arrayBuffer());
@@ -689,7 +757,7 @@
         }
 
         const found=findTable();
-        if (!found) throw new Error("未找到同时包含时间/经度/纬度关键列的表");
+        if (!found) throw new Error("no table with ts/lon/lat");
 
         const { table, tsCol, lonCol, latCol, names } = found;
 
@@ -701,7 +769,7 @@
         const row=mm[0]?.values?.[0]||[];
         const rawMin = Number(row[0]);
         const rawMax = Number(row[1]);
-        if (!Number.isFinite(rawMin)||!Number.isFinite(rawMax)) throw new Error("无法读取 MIN/MAX(ts)");
+        if (!Number.isFinite(rawMin)||!Number.isFinite(rawMax)) throw new Error("bad min/max(ts)");
 
         const tsIsMs = (rawMin >= 1e12 || rawMax >= 1e12);
         minTs = tsIsMs ? rawMin : rawMin * 1000;
@@ -715,26 +783,25 @@
           tsIsMs
         };
 
-        const s=document.getElementById("startInput"), e=document.getElementById("endInput");
+        const s=qs("#startInput"), e=qs("#endInput");
         s.min=tsToLocalInput(minTs); s.max=tsToLocalInput(maxTs);
         e.min=tsToLocalInput(minTs); e.max=tsToLocalInput(maxTs);
         s.value=tsToLocalInput(minTs); e.value=tsToLocalInput(maxTs);
 
-        document.getElementById("fileStatus").style.display="block";
-        document.getElementById("fileStatus").textContent=`已连接 SQLite（${file.name} / 表：${table}）`;
+        qs("#fileStatus").style.display="block";
+        qs("#fileStatus").textContent=t("tools.locations.sqliteConnected", { name: file.name, table });
 
         applyFilter_DB();
       }catch(e){
-        const fe=document.getElementById("fileError");
+        const fe=qs("#fileError");
         fe.style.display="block";
-        fe.textContent=`SQLite 解析失败：${e.message}`;
+        fe.textContent=t("tools.locations.errSQLiteParse", { msg: e.message });
         console.error(e);
         hideLoading();
         window.__TT_SQLDB__=null;
       }
     }
 
-    /************ 文件加载分发 ************/
     async function loadFromFile(file){
       const name=(file?.name||"").toLowerCase();
       try{
@@ -744,17 +811,17 @@
         } else if (name.endsWith(".db") || name.endsWith(".sqlite")){
           await loadFromSQLite(file);
         } else if (name.endsWith(".csv")){
-          showLoading("解析 CSV…");
+          showLoading(t("tools.locations.loadingCSV"));
           const txt = await file.text();
           const arr = parseCSV(txt);
           setTrackData(arr, file.name);
         } else if (name.endsWith(".gpx")){
-          showLoading("解析 GPX…");
+          showLoading(t("tools.locations.loadingGPX"));
           const txt = await file.text();
           const arr = parseGPX(txt);
           setTrackData(arr, file.name);
         } else if (name.endsWith(".kml")){
-          showLoading("解析 KML…");
+          showLoading(t("tools.locations.loadingKML"));
           const txt = await file.text();
           const arr = parseKML(txt);
           setTrackData(arr, file.name);
@@ -770,44 +837,43 @@
           } else if (trimmed.includes(',') && trimmed.split('\n')[0].includes(',')){
             setTrackData(parseCSV(trimmed), file.name);
           } else {
-            throw new Error("未知格式：请提供 JSON/SQLite/CSV/GPX/KML");
+            throw new Error(t("tools.locations.errUnknownFormat"));
           }
         }
       }catch(e){
-        const fe=document.getElementById("fileError");
+        const fe=qs("#fileError");
         fe.style.display="block";
-        fe.textContent=`文件加载失败：${e.message}`;
+        fe.textContent=t("tools.locations.errFileLoad", { msg: e.message });
         console.error(e);
         hideLoading();
       }
     }
 
-    /************ 面板与初始化 ************/
     function setPanelCollapsed(collapsed){
-      const panel=document.getElementById("infoPanel");
-      const btn=document.getElementById("togglePanel");
+      const panel=qs("#infoPanel");
+      const btn=qs("#togglePanel");
       if (collapsed){
         panel.classList.add("collapsed");
-        btn.textContent="展开";
+        btn.textContent=t("tools.locations.unfold");
         btn.setAttribute("aria-expanded","false");
         localStorage.setItem("tt_panel_collapsed","1");
       } else {
         panel.classList.remove("collapsed");
-        btn.textContent="收起";
+        btn.textContent=t("tools.locations.fold");
         btn.setAttribute("aria-expanded","true");
         localStorage.setItem("tt_panel_collapsed","0");
       }
     }
 
     function persistOpts(){
-      localStorage.setItem('tt_show_points', document.getElementById('optShowPoints').checked ? '1' : '0');
-      localStorage.setItem('tt_show_line',   document.getElementById('optShowLine').checked ? '1' : '0');
-      localStorage.setItem('tt_point_color', document.getElementById('pointColor').value || '#5ab1ff');
+      localStorage.setItem('tt_show_points', qs('#optShowPoints').checked ? '1' : '0');
+      localStorage.setItem('tt_show_line',   qs('#optShowLine').checked ? '1' : '0');
+      localStorage.setItem('tt_point_color', qs('#pointColor').value || '#5ab1ff');
     }
     function restoreOpts(){
-      const sp = localStorage.getItem('tt_show_points'); if (sp!=null) document.getElementById('optShowPoints').checked = sp==='1';
-      const sl = localStorage.getItem('tt_show_line');   if (sl!=null) document.getElementById('optShowLine').checked   = sl==='1';
-      const pc = localStorage.getItem('tt_point_color'); if (pc) document.getElementById('pointColor').value = pc;
+      const sp = localStorage.getItem('tt_show_points'); if (sp!=null) qs('#optShowPoints').checked = sp==='1';
+      const sl = localStorage.getItem('tt_show_line');   if (sl!=null) qs('#optShowLine').checked   = sl==='1';
+      const pc = localStorage.getItem('tt_point_color'); if (pc) qs('#pointColor').value = pc;
     }
 
     function init(){
@@ -819,23 +885,23 @@
       setPanelCollapsed(localStorage.getItem("tt_panel_collapsed")==="1");
       restoreOpts();
 
-      document.getElementById("togglePanel").addEventListener("click",()=>{
-        setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed"));
+      qs("#togglePanel").addEventListener("click",()=>{
+        setPanelCollapsed(!qs("#infoPanel").classList.contains("collapsed"));
       });
-      document.querySelector(".panel-header").addEventListener("dblclick", ()=>{
-        setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed"));
+      qs(".panel-header").addEventListener("dblclick", ()=>{
+        setPanelCollapsed(!qs("#infoPanel").classList.contains("collapsed"));
       });
 
-      document.getElementById("applyBtn").addEventListener("click",()=>{ persistOpts(); applyFilter(); });
-      document.getElementById("resetBtn").addEventListener("click",()=>{ persistOpts(); resetRange(); });
-      document.getElementById("startInput").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
-      document.getElementById("endInput").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
-      document.getElementById("optShowPoints").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
-      document.getElementById("optShowLine").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
-      document.getElementById("pointColor").addEventListener("input",()=>{ persistOpts(); applyFilter(); });
+      qs("#applyBtn").addEventListener("click",()=>{ persistOpts(); applyFilter(); });
+      qs("#resetBtn").addEventListener("click",()=>{ persistOpts(); resetRange(); });
+      qs("#startInput").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
+      qs("#endInput").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
+      qs("#optShowPoints").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
+      qs("#optShowLine").addEventListener("change",()=>{ persistOpts(); applyFilter(); });
+      qs("#pointColor").addEventListener("input",()=>{ persistOpts(); applyFilter(); });
 
-      document.getElementById("fileInput").addEventListener("change",(e)=>{ const f=e.target.files?.[0]; if (f) loadFromFile(f); });
-      const dz=document.getElementById("dropzone");
+      qs("#fileInput").addEventListener("change",(e)=>{ const f=e.target.files?.[0]; if (f) loadFromFile(f); });
+      const dz=qs("#dropzone");
       const prevent=ev=>{ ev.preventDefault(); ev.stopPropagation(); };
       ["dragenter","dragover","dragleave","drop"].forEach(evt=>dz.addEventListener(evt,prevent,false));
       dz.addEventListener("dragenter",()=>dz.classList.add("dragover"));
@@ -844,22 +910,23 @@
       dz.addEventListener("drop",(ev)=>{ dz.classList.remove("dragover"); const f=ev.dataTransfer.files?.[0]; if (f) loadFromFile(f); });
 
       if (location.protocol === 'file:'){
-        const fe=document.getElementById("fileError");
+        const fe=qs("#fileError");
         fe.style.display="block";
-        fe.textContent="提示：请通过 http(s) 本地服务打开（如 python -m http.server 8080），避免 file:// 下第三方统计的 CORS 报错。";
+        fe.textContent=t("tools.locations.tipHttpServer");
       }
 
       loadFromInlineScript();
+      applyI18nToDOM(); // 确保初始渲染文案
     }
 
-    // 暴露给作用域外部（可调试）
+    // 暴露调试
     window.__tt_init = init;
 
     // 运行初始化
     init();
   }
 
-  /************ 异步加载百度地图后再启动 ************/
+  /************ 异步加载百度地图后启动 ************/
   loadBMapGL({
     ak: "sUryxWWxRyHZxuzB634wHfmlqy6RgMEy", // 替换为你的 AK
     v: "1.0",
@@ -873,7 +940,7 @@
     const fe = document.getElementById("fileError");
     if (fe) {
       fe.style.display = "block";
-      fe.textContent = "百度地图加载失败，请检查网络或 AK 配置。";
+      fe.textContent = "Baidu Map GL load failed. Check network or AK.";
     }
   });
 </script>
