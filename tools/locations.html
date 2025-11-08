@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>轨迹预览（基础：时间+坐标，自动识别秒/毫秒）</title>
+  <title>轨迹预览（时间+坐标；只画点，海量点自适应）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html, body, #map { width:100%; height:100%; margin:0; padding:0; background:#0f1117; color:#fff; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif; }
@@ -20,7 +20,6 @@
     .toggle:hover { background:#171b22; }
     .content { margin-top:8px; }
     .row { margin-top:8px; display:grid; gap:6px; }
-    .row label { font-size:12px; color:#bbb; }
     .row input[type="datetime-local"]{ width:100%; box-sizing:border-box; border-radius:8px; border:1px solid #30363d; background:#0b0d12; color:#e6edf3; padding:6px 8px; }
     .btns { display:flex; gap:8px; margin-top:6px; }
     .btns button, .btns label.btn { flex:1; border:1px solid #30363d; background:#11141a; color:#e6edf3; border-radius:8px; padding:6px 10px; cursor:pointer; text-align:center; }
@@ -30,9 +29,13 @@
     .dropzone.dragover { border-color:#58a6ff; background:rgba(13,15,22,0.8); }
     .fileok { color:#59f; font-size:12px; word-break:break-all; }
     .error { color:#ff6b6b; font-size:12px; white-space:pre-wrap; }
-    code { background:#0b0d12; padding:1px 4px; border-radius:4px; }
-    .panel.collapsed { padding:8px 10px; max-height:48px; overflow:hidden; }
-    .panel.collapsed .content { display:none; }
+
+    /* 加载遮罩 */
+    .loading { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); z-index: 99999; backdrop-filter: blur(2px); }
+    .loading.show { display: flex; }
+    .spinner { width: 56px; height: 56px; border-radius: 50%; border: 6px solid rgba(255,255,255,0.2); border-top-color: #58a6ff; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { margin-top: 12px; color: #c9d1d9; font-size: 12px; text-align: center; }
   </style>
 
   <!-- 百度地图 WebGL API（替换 ak 为你的） -->
@@ -40,7 +43,7 @@
   <!-- sql.js（SQLite WASM） -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
 
-  <!-- 默认内联数据（可为空数组；页面初载会读取这里） -->
+  <!-- 默认内联数据 -->
   <script id="trackData" type="application/json">[]</script>
 </head>
 <body>
@@ -49,23 +52,22 @@
   <div class="panel" id="infoPanel">
     <div class="panel-header">
       <div class="panel-title">
-        <b>轨迹点预览（基础）</b>
+        <b>轨迹点预览（只画点）</b>
         <span id="miniStats" class="mini">—</span>
       </div>
-      <button id="togglePanel" class="toggle" aria-expanded="true" title="折叠/展开（快捷键：P）">收起</button>
+      <button id="togglePanel" class="toggle" aria-expanded="true">收起</button>
     </div>
 
     <div class="content">
       <div class="row">
-        <label>数据来源：</label>
         <div class="btns">
           <label class="btn" for="fileInput">选择文件（.json / .db / .sqlite）</label>
         </div>
         <input id="fileInput" type="file" accept=".json,application/json,.db,.sqlite,application/octet-stream" style="display:none" />
         <div class="dropzone" id="dropzone">拖拽 JSON 或 SQLite DB 文件到这里加载</div>
         <div class="muted">
-          JSON：<code>timestamp / timeString / ts</code> 与 <code>longitude|lon / latitude|lat</code>（或 <code>lon_e6 / lat_e6</code>）；<br />
-          SQLite：至少包含时间/经度/纬度列，常见别名自动识别；<code>gcj02* / isMarsLocation</code> 可选；时间列支持秒或毫秒。
+          JSON：<code>timestamp / timeString / ts</code> + <code>longitude|lon / latitude|lat</code>（或 <code>lon_e6 / lat_e6</code>）；<br/>
+          SQLite：至少包含 时间/经度/纬度；秒/毫秒自动识别；可选 <code>gcj02*</code>/<code>isMarsLocation</code>。
         </div>
         <div id="fileStatus" class="fileok" style="display:none;"></div>
         <div id="fileError" class="error" style="display:none;"></div>
@@ -84,12 +86,24 @@
       <div class="row">
         <div id="statsCount">点数：-</div>
         <div id="statsRange">时间范围：-</div>
-        <div class="muted">仅使用时间与坐标；WGS84/GCJ-02 自动识别并转换至 BD09。</div>
+        <div class="muted">小于 1000：Marker；≥1000：海量点（PointCollection）；若不可用则回退 Canvas 海量点。</div>
       </div>
     </div>
   </div>
 
+  <!-- 加载遮罩 -->
+  <div id="loading" class="loading" aria-live="polite" aria-busy="true">
+    <div>
+      <div class="spinner"></div>
+      <div id="loadingText" class="loading-text">加载中…</div>
+    </div>
+  </div>
+
   <script>
+    /************ 实用：加载遮罩 ************/
+    function showLoading(msg){ const el=document.getElementById("loading"); document.getElementById("loadingText").textContent=msg||"加载中…"; el.classList.add("show"); }
+    function hideLoading(){ document.getElementById("loading").classList.remove("show"); }
+
     /************ 坐标转换 ************/
     function _outOfChina(lng, lat){return(lng<72.004||lng>137.8347||lat<0.8293||lat>55.8271);}
     function _transformLat(lng,lat){let ret=-100+2*lng+3*lat+0.2*lat*lat+0.1*lng*lat+0.2*Math.sqrt(Math.abs(lng));ret+=(20*Math.sin(6*lng*Math.PI)+20*Math.sin(2*lng*Math.PI))*2/3;ret+=(20*Math.sin(lat*Math.PI)+40*Math.sin(lat/3*Math.PI))*2/3;ret+=(160*Math.sin(lat/12*Math.PI)+320*Math.sin(lat*Math.PI/30))*2/3;return ret;}
@@ -103,7 +117,6 @@
     function tsToLocal(ts){const d=new Date(ts);return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;}
     function tsToLocalInput(ts){const d=new Date(ts);return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;}
     function inputToTs(val){ if(!val) return null; const t=new Date(val).getTime(); return Number.isFinite(t)?t:null; }
-    function normTs(x){const n=Number(x); return n<1e12?n*1000:n;}
 
     /************ 兼容解析（仅保留 时间+坐标）************/
     function parseTsFlexible(p){
@@ -119,164 +132,257 @@
       if (Number.isFinite(p.lat) && Number.isFinite(p.lon)) return {lng:+p.lon, lat:+p.lat, gcj:false};
       return null;
     }
-    const toE6 = x => Math.round(x * 1e6);
 
     /************ 全局状态 ************/
     let map=null;
-    let rawTrack=[]; // 仅 { ts, lon_e6, lat_e6, __gcj? }
+    let rawTrack=[]; // { ts(ms), lon_e6, lat_e6, __gcj? }
     let minTs=null, maxTs=null;
-
-    // SQLite 会话信息（动态列 + 时间单位）
-    // { db, table, tsCol, lonCol, latCol, gcjLatCol|null, gcjLonCol|null, isMarsCol|null, tsIsMs:boolean }
+    let bigLayer=null, smallMarkers=[];
+    let canvasLayer=null; // Canvas 回退
     window.__TT_SQLDB__=null;
 
-    /************ 渲染 ************/
-    function buildPoints(raw){
-      const pts=[];
-      for (const p of raw){
-        const lng=p.lon_e6/1e6, lat=p.lat_e6/1e6;
-        let bdLng, bdLat;
-        if (p.__gcj===true){ [bdLng,bdLat]=gcj02ToBd09(lng,lat); }
-        else { [bdLng,bdLat]=wgs84ToBd09(lng,lat); }
-        pts.push({ point:new BMapGL.Point(bdLng,bdLat), data:p });
-      }
-      return pts;
+    /************ 能力探测（PointCollection 兼容） ************/
+    function getPointConsts(){
+      const sizeSmall = (window.BMAP_POINT_SIZE_SMALL!==undefined) ? window.BMAP_POINT_SIZE_SMALL
+                        : (BMapGL && BMapGL.PointSizeType && BMapGL.PointSizeType.SMALL) || 1;
+      const shapeCircle = (window.BMAP_POINT_SHAPE_CIRCLE!==undefined) ? window.BMAP_POINT_SHAPE_CIRCLE
+                        : (BMapGL && BMapGL.PointShapeType && BMapGL.PointShapeType.CIRCLE) || 0;
+      const hasPC = !!(BMapGL && typeof BMapGL.PointCollection === 'function');
+      return { sizeSmall, shapeCircle, hasPC };
     }
 
-    function renderMarkers(filtered){
-      map.clearOverlays();
-      if (filtered.length===0){
+    /************ Canvas 海量点回退（只画点） ************/
+    class CanvasDots extends BMapGL.Overlay {
+      constructor(points, color='#5ab1ff', radius=2){
+        super();
+        this.points = points; // BMapGL.Point[]
+        this.color = color;
+        this.radius = radius;
+        this._map = null;
+        this._canvas = null;
+        this._ctx = null;
+        this._bindedDraw = this.draw.bind(this);
+        this._resizeObserver = null;
+      }
+      initialize(map){
+        this._map = map;
+        const canvas = this._canvas = document.createElement('canvas');
+        canvas.style.position = 'absolute';
+        canvas.style.left = 0; canvas.style.top = 0;
+        canvas.style.pointerEvents = 'none'; // 仅展示，不拦截事件
+        this._ctx = canvas.getContext('2d');
+        map.getPanes().labelPane.appendChild(canvas);
+        // 监听地图事件更新
+        map.addEventListener('zoomend', this._bindedDraw);
+        map.addEventListener('moveend', this._bindedDraw);
+        map.addEventListener('resize', this._bindedDraw);
+        // 初始尺寸
+        this._syncSize();
+        return canvas;
+      }
+      _syncSize(){
+        const sz = this._map.getSize();
+        const ratio = window.devicePixelRatio || 1;
+        this._canvas.width = Math.round(sz.width * ratio);
+        this._canvas.height = Math.round(sz.height * ratio);
+        this._canvas.style.width = sz.width + 'px';
+        this._canvas.style.height = sz.height + 'px';
+        this._ctx.setTransform(ratio,0,0,ratio,0,0);
+      }
+      draw(){
+        if (!this._map || !this._ctx) return;
+        this._syncSize();
+        const ctx = this._ctx;
+        const radius = this.radius;
+        ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
+        ctx.fillStyle = this.color;
+        // 视窗裁剪：仅绘制屏内点
+        const bounds = this._map.getBounds();
+        for (let i=0;i<this.points.length;i++){
+          const p = this.points[i];
+          if (!bounds.containsPoint(p)) continue;
+          const pix = this._map.pointToPixel(p);
+          ctx.beginPath();
+          ctx.arc(pix.x, pix.y, radius, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
+      setPoints(points){ this.points = points || []; this.draw(); }
+      setStyle({color, radius}){ if (color) this.color=color; if (radius) this.radius=radius; this.draw(); }
+      remove(){
+        if (!this._map) return;
+        this._map.removeEventListener('zoomend', this._bindedDraw);
+        this._map.removeEventListener('moveend', this._bindedDraw);
+        this._map.removeEventListener('resize', this._bindedDraw);
+        if (this._canvas && this._canvas.parentNode) this._canvas.parentNode.removeChild(this._canvas);
+        this._canvas = null; this._ctx = null; this._map = null;
+      }
+    }
+
+    /************ 统一渲染（只画点） ************/
+    function clearOverlays(){
+      if (bigLayer){ map.removeOverlay(bigLayer); bigLayer=null; }
+      if (canvasLayer){ map.removeOverlay(canvasLayer); canvasLayer.remove?.(); canvasLayer=null; }
+      if (smallMarkers.length){ for (const m of smallMarkers) map.removeOverlay(m); smallMarkers.length=0; }
+    }
+
+    function renderUnified(arr){
+      clearOverlays();
+
+      if (!arr || arr.length===0){
         map.centerAndZoom(new BMapGL.Point(116.404,39.915),12);
         document.getElementById("statsCount").textContent=`点数：0`;
         document.getElementById("statsRange").textContent=`时间范围：-`;
         document.getElementById("miniStats").textContent=`0 · —`;
-        return;
-      }
-      map.setViewport(filtered.map(x=>x.point));
-
-      for (let i=0;i<filtered.length;i++){
-        const { point, data } = filtered[i];
-        const marker=new BMapGL.Marker(point);
-        marker.setTitle(`#${i}\n时间: ${tsToLocal(data.ts)}`);
-        map.addOverlay(marker);
-      }
-      if (filtered.length>=1){
-        const first=filtered[0].point;
-        const startMarker=new BMapGL.Marker(first);
-        startMarker.setTitle("起点");
-        const startLabel=new BMapGL.Label("起点",{position:first,offset:new BMapGL.Size(10,-20)});
-        startLabel.setStyle({color:"#00E0FF",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #00E0FF",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
-        map.addOverlay(startMarker); map.addOverlay(startLabel);
-      }
-      if (filtered.length>=2){
-        const last=filtered[filtered.length-1].point;
-        const endMarker=new BMapGL.Marker(last);
-        endMarker.setTitle("终点");
-        const endLabel=new BMapGL.Label("终点",{position:last,offset:new BMapGL.Size(10,-20)});
-        endLabel.setStyle({color:"#FF4D4F",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #FF4D4F",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
-        map.addOverlay(endMarker); map.addOverlay(endLabel);
-      }
-    }
-
-    function applyFilter_JSON(){
-      const sTs=inputToTs(document.getElementById("startInput").value);
-      const eTs=inputToTs(document.getElementById("endInput").value);
-      const s=(sTs==null)?minTs:sTs;
-      const e=(eTs==null)?maxTs:eTs;
-      if (s>e){ alert("起始时间不可晚于结束时间"); return; }
-
-      const arr=rawTrack.filter(p=>p.ts>=s&&p.ts<=e);
-      renderMarkers(buildPoints(arr));
-
-      const count=arr.length;
-      const startTxt=(count>0)?tsToLocal(arr[0].ts):"-";
-      const endTxt=(count>0)?tsToLocal(arr[count-1].ts):"-";
-      document.getElementById("statsCount").textContent=`点数：${count}`;
-      document.getElementById("statsRange").textContent=`时间范围：${startTxt} → ${endTxt}`;
-      document.getElementById("miniStats").textContent=`${count} · ${startTxt} → ${endTxt}`;
-    }
-
-    function applyFilter_DB(){
-      const sess=window.__TT_SQLDB__;
-      if (!sess){ applyFilter_JSON(); return; }
-
-      const sTs=inputToTs(document.getElementById("startInput").value);
-      const eTs=inputToTs(document.getElementById("endInput").value);
-      const s=(sTs==null)?minTs:sTs;
-      const e=(eTs==null)?maxTs:eTs;
-      if (s>e){ alert("起始时间不可晚于结束时间"); return; }
-
-      const { db, table, tsCol, lonCol, latCol, gcjLatCol, gcjLonCol, isMarsCol, tsIsMs } = sess;
-
-      // 把页面选择的毫秒时间，转换为 DB 的单位（秒或毫秒）
-      const qS = tsIsMs ? Math.floor(s) : Math.floor(s/1000);
-      const qE = tsIsMs ? Math.floor(e) : Math.floor(e/1000);
-
-      const selectParts = [
-        `${tsCol} AS _ts`,
-        `${lonCol} AS _lon`,
-        `${latCol} AS _lat`,
-      ];
-      if (gcjLatCol) selectParts.push(`${gcjLatCol} AS _gclat`);
-      if (gcjLonCol) selectParts.push(`${gcjLonCol} AS _gclon`);
-      if (isMarsCol) selectParts.push(`${isMarsCol} AS _ismars`);
-
-      const sql=`SELECT ${selectParts.join(", ")} FROM ${table} WHERE ${tsCol} BETWEEN ? AND ? ORDER BY ${tsCol} ASC;`;
-      const res=db.exec(sql,[qS,qE]);
-
-      if (!res||res.length===0){
-        renderMarkers([]); document.getElementById("statsCount").textContent=`点数：0`;
-        document.getElementById("statsRange").textContent=`时间范围：-`; document.getElementById("miniStats").textContent=`0 · —`; return;
+        hideLoading(); return;
       }
 
-      const cols=res[0].columns, rows=res[0].values;
-      const arr=rows.map(row=>{
-        const r={}; for (let i=0;i<cols.length;i++) r[cols[i]]=row[i];
+      // 转 BD09
+      const pts=[];
+      for (const p of arr){
+        const lng=p.lon_e6/1e6, lat=p.lat_e6/1e6;
+        let bdLng, bdLat;
+        if (p.__gcj===true){ [bdLng,bdLat]=gcj02ToBd09(lng,lat); }
+        else { [bdLng,bdLat]=wgs84ToBd09(lng,lat); }
+        pts.push(new BMapGL.Point(bdLng,bdLat));
+      }
+      try{ map.setViewport(pts); }catch(_){}
 
-        // 读出后统一为毫秒
-        const ts = tsIsMs ? Number(r._ts) : Number(r._ts) * 1000;
+      const { sizeSmall, shapeCircle, hasPC } = getPointConsts();
 
-        const lon=Number(r._lon), lat=Number(r._lat);
-        const looksDeg=Number.isFinite(lon)&&Number.isFinite(lat)&&Math.abs(lon)<=180&&Math.abs(lat)<=90;
-        const lon_e6=looksDeg?Math.round(lon*1e6):Math.round(lon);
-        const lat_e6=looksDeg?Math.round(lat*1e6):Math.round(lat);
+      if (arr.length < 1000){
+        // 逐点 Marker（含起终点标注）
+        const first = new BMapGL.Marker(pts[0]); first.setTitle("起点"); map.addOverlay(first); smallMarkers.push(first);
+        const firstLabel=new BMapGL.Label("起点",{position:pts[0],offset:new BMapGL.Size(10,-20)});
+        firstLabel.setStyle({color:"#00E0FF",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #00E0FF",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
+        map.addOverlay(firstLabel); smallMarkers.push(firstLabel);
 
-        let isGcj=false;
-        if (typeof r._ismars!=="undefined" && Number(r._ismars)===1) {
-          isGcj=true;
-        } else if (typeof r._gclat!=="undefined" && typeof r._gclon!=="undefined") {
-          const glat=Number(r._gclat), glon=Number(r._gclon);
-          if (Number.isFinite(glat)&&Number.isFinite(glon)) isGcj=true;
+        for (let i=0;i<pts.length;i++){
+          const mk = new BMapGL.Marker(pts[i]);
+          mk.setTitle(`#${i}\n时间: ${tsToLocal(arr[i].ts)}`);
+          map.addOverlay(mk);
+          smallMarkers.push(mk);
         }
+        if (pts.length>=2){
+          const last = new BMapGL.Marker(pts[pts.length-1]); last.setTitle("终点"); map.addOverlay(last); smallMarkers.push(last);
+          const lastLabel=new BMapGL.Label("终点",{position:pts[pts.length-1],offset:new BMapGL.Size(10,-20)});
+          lastLabel.setStyle({color:"#FF4D4F",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #FF4D4F",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
+          map.addOverlay(lastLabel); smallMarkers.push(lastLabel);
+        }
+      } else if (hasPC && sizeSmall!=null && shapeCircle!=null){
+        // 海量点（官方 PointCollection）
+        const opts = { size: sizeSmall, shape: shapeCircle, color: '#5ab1ff' };
+        const pc = new BMapGL.PointCollection(pts, opts);
+        pc.addEventListener('click', e=>{
+          const idx=e.index!=null?e.index:null;
+          if (idx!=null && arr[idx]){
+            const lbl=new BMapGL.Label(tsToLocal(arr[idx].ts), { position: e.point, offset:new BMapGL.Size(10,-20) });
+            lbl.setStyle({color:"#fff",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #30363d",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
+            map.addOverlay(lbl); setTimeout(()=>map.removeOverlay(lbl), 1200);
+          }
+        });
+        map.addOverlay(pc);
+        bigLayer = pc;
+      } else {
+        // 回退：Canvas 海量点（只画点）
+        const dots = new CanvasDots(pts, '#5ab1ff', 2);
+        map.addOverlay(dots);
+        canvasLayer = dots;
+      }
 
-        return { ts, lon_e6, lat_e6, __gcj:isGcj };
+      hideLoading();
+    }
+
+    /************ 过滤（JSON） ************/
+    function applyFilter_JSON(){
+      showLoading("筛选并渲染中…");
+      requestAnimationFrame(()=>{
+        const sTs=inputToTs(document.getElementById("startInput").value);
+        const eTs=inputToTs(document.getElementById("endInput").value);
+        const s=(sTs==null)?minTs:sTs;
+        const e=(eTs==null)?maxTs:eTs;
+        if (s>e){ alert("起始时间不可晚于结束时间"); hideLoading(); return; }
+        const arr=rawTrack.filter(p=>p.ts>=s&&p.ts<=e);
+        renderUnified(arr);
+        const count=arr.length, startTxt=(count>0)?tsToLocal(arr[0].ts):"-", endTxt=(count>0)?tsToLocal(arr[count-1].ts):"-";
+        document.getElementById("statsCount").textContent=`点数：${count}`;
+        document.getElementById("statsRange").textContent=`时间范围：${startTxt} → ${endTxt}`;
+        document.getElementById("miniStats").textContent=`${count} · ${startTxt} → ${endTxt}`;
       });
+    }
 
-      renderMarkers(buildPoints(arr));
-      const count=arr.length;
-      const startTxt=(count>0)?tsToLocal(arr[0].ts):"-";
-      const endTxt=(count>0)?tsToLocal(arr[count-1].ts):"-";
-      document.getElementById("statsCount").textContent=`点数：${count}`;
-      document.getElementById("statsRange").textContent=`时间范围：${startTxt} → ${endTxt}`;
-      document.getElementById("miniStats").textContent=`${count} · ${startTxt} → ${endTxt}`;
+    /************ 过滤（DB，prepare/bind/step） ************/
+    function applyFilter_DB(){
+      const sess=window.__TT_SQLDB__; if (!sess){ applyFilter_JSON(); return; }
+      showLoading("数据库查询与渲染中…");
+      requestAnimationFrame(()=>{
+        const sTs=inputToTs(document.getElementById("startInput").value);
+        const eTs=inputToTs(document.getElementById("endInput").value);
+        const s=(sTs==null)?minTs:sTs, e=(eTs==null)?maxTs:eTs;
+        if (s>e){ alert("起始时间不可晚于结束时间"); hideLoading(); return; }
+
+        const { db, table, tsCol, lonCol, latCol, gcjLatCol, gcjLonCol, isMarsCol, tsIsMs } = sess;
+        const qS = tsIsMs ? Math.floor(s) : Math.floor(s/1000);
+        const qE = tsIsMs ? Math.floor(e) : Math.floor(e/1000);
+
+        const sel = [
+          `${tsCol} AS _ts`,
+          `${lonCol} AS _lon`,
+          `${latCol} AS _lat`,
+          gcjLatCol ? `${gcjLatCol} AS _gclat` : null,
+          gcjLonCol ? `${gcjLonCol} AS _gclon` : null,
+          isMarsCol ? `${isMarsCol} AS _ismars` : null
+        ].filter(Boolean).join(", ");
+        const sql=`SELECT ${sel} FROM ${table} WHERE ${tsCol} BETWEEN ? AND ? ORDER BY ${tsCol} ASC;`;
+
+        let stmt;
+        try{
+          stmt = db.prepare(sql); stmt.bind([qS,qE]);
+          const arr=[];
+          while (stmt.step()){
+            const row=stmt.getAsObject();
+            const ts = tsIsMs ? Number(row._ts) : Number(row._ts)*1000;
+            const lon=Number(row._lon), lat=Number(row._lat);
+            const looksDeg=Number.isFinite(lon)&&Number.isFinite(lat)&&Math.abs(lon)<=180&&Math.abs(lat)<=90;
+            const lon_e6=looksDeg?Math.round(lon*1e6):Math.round(lon);
+            const lat_e6=looksDeg?Math.round(lat*1e6):Math.round(lat);
+            let isGcj=false;
+            if (typeof row._ismars!=="undefined" && Number(row._ismars)===1) isGcj=true;
+            else if (typeof row._gclat!=="undefined" && typeof row._gclon!=="undefined"){
+              const glat=Number(row._gclat), glon=Number(row._gclon);
+              if (Number.isFinite(glat)&&Number.isFinite(glon)) isGcj=true;
+            }
+            arr.push({ ts, lon_e6, lat_e6, __gcj:isGcj });
+          }
+          stmt.free();
+
+          renderUnified(arr);
+          const count=arr.length, startTxt=(count>0)?tsToLocal(arr[0].ts):"-", endTxt=(count>0)?tsToLocal(arr[count-1].ts):"-";
+          document.getElementById("statsCount").textContent=`点数：${count}`;
+          document.getElementById("statsRange").textContent=`时间范围：${startTxt} → ${endTxt}`;
+          document.getElementById("miniStats").textContent=`${count} · ${startTxt} → ${endTxt}`;
+        }catch(err){
+          if (stmt) try{ stmt.free(); }catch(_){}
+          const fe=document.getElementById("fileError"); fe.style.display="block"; fe.textContent=`SQLite 查询失败：${err.message}`;
+          console.error(err); renderUnified([]);
+        }
+      });
     }
 
     function applyFilter(){ if (window.__TT_SQLDB__) applyFilter_DB(); else applyFilter_JSON(); }
     function resetRange(){ document.getElementById("startInput").value=tsToLocalInput(minTs); document.getElementById("endInput").value=tsToLocalInput(maxTs); applyFilter(); }
 
-    /************ 数据加载（仅保留时间+坐标）************/
+    /************ 数据加载（仅保留时间+坐标） ************/
     function setTrackData(arr, sourceLabel="内联/JSON"){
+      showLoading("解析 JSON…");
       window.__TT_SQLDB__=null;
-      if (!Array.isArray(arr)) throw new Error("JSON 顶层必须是数组");
-
+      if (!Array.isArray(arr)) { hideLoading(); throw new Error("JSON 顶层必须是数组"); }
       const cleaned=[];
       for (const p of arr){
-        const ts=parseTsFlexible(p);
-        const deg=pickDegFlexible(p);
+        const ts=parseTsFlexible(p), deg=pickDegFlexible(p);
         if (!Number.isFinite(ts) || !deg) continue;
         cleaned.push({ ts: (ts<1e12?ts*1000:ts), lon_e6: Math.round(deg.lng*1e6), lat_e6: Math.round(deg.lat*1e6), __gcj: !!deg.gcj });
       }
-
       cleaned.sort((a,b)=>a.ts-b.ts);
       if (cleaned.length>0){ minTs=cleaned[0].ts; maxTs=cleaned[cleaned.length-1].ts; }
       else { const now=Date.now(); minTs=now-3600_000; maxTs=now; }
@@ -299,7 +405,7 @@
       const node=document.getElementById('trackData');
       const rawText=node.textContent.trim();
       try{ setTrackData(JSON.parse(rawText||"[]"), "内联 trackData"); }
-      catch(e){ const fe=document.getElementById("fileError"); fe.style.display="block"; fe.textContent=`内联 JSON 解析失败：${e.message}`; }
+      catch(e){ const fe=document.getElementById("fileError"); fe.style.display="block"; fe.textContent=`内联 JSON 解析失败：${e.message}`; hideLoading(); }
     }
 
     // sql.js init once
@@ -315,12 +421,15 @@
       const fileError=document.getElementById("fileError");
       const fileStatus=document.getElementById("fileStatus");
       fileError.style.display="none"; fileStatus.style.display="none";
+
+      showLoading("加载 SQLite…");
       try{
         const SQL=await initSqlJsOnce();
         const buf=new Uint8Array(await file.arrayBuffer());
         const db=new SQL.Database(buf);
+
         const tables=db.exec(`SELECT name FROM sqlite_master WHERE type='table'`)?.flatMap(r=>r.values.map(v=>String(v[0])))||[];
-        const prefer=["location","Location","locations","userMark","frequentIndexTable"];
+        const prefer=["location","Location","locations","userMark","frequentIndexTable","points","track","tracking"];
         let candidate=prefer.find(n=>tables.includes(n))||null;
 
         function tableInfo(name){ return db.exec(`PRAGMA table_info(${JSON.stringify(name)})`); }
@@ -344,31 +453,24 @@
         }
 
         const found=findTable();
-        if (!found) throw new Error("未找到同时包含时间/经度/纬度关键列的表（例如 location/userMark）");
+        if (!found) throw new Error("未找到同时包含时间/经度/纬度关键列的表");
 
         const { table, tsCol, lonCol, latCol, names } = found;
 
-        // 记录可选 GCJ 相关列（动态查询）
         const hasGcjLat = names.has("gcj02latitude");
         const hasGcjLon = names.has("gcj02longitude");
         const hasIsMars = names.has("isMarsLocation");
 
-        // 预读时间范围（RAW）
         const mm=db.exec(`SELECT MIN(${tsCol}) AS min_ts, MAX(${tsCol}) AS max_ts FROM ${table};`);
         const row=mm[0]?.values?.[0]||[];
         const rawMin = Number(row[0]);
         const rawMax = Number(row[1]);
-
         if (!Number.isFinite(rawMin)||!Number.isFinite(rawMax)) throw new Error("无法读取 MIN/MAX(ts)");
 
-        // 判断 DB 时间单位（>=1e12 视为毫秒）
         const tsIsMs = (rawMin >= 1e12 || rawMax >= 1e12);
-
-        // 统一到毫秒用于 UI
         minTs = tsIsMs ? rawMin : rawMin * 1000;
         maxTs = tsIsMs ? rawMax : rawMax * 1000;
 
-        // 保存会话（包含动态列名 + 时间单位）
         window.__TT_SQLDB__={
           db, table, tsCol, lonCol, latCol,
           gcjLatCol: hasGcjLat ? "gcj02latitude"  : null,
@@ -377,7 +479,6 @@
           tsIsMs
         };
 
-        // 配置时间输入并首次渲染
         const s=document.getElementById("startInput"), e=document.getElementById("endInput");
         s.min=tsToLocalInput(minTs); s.max=tsToLocalInput(maxTs);
         e.min=tsToLocalInput(minTs); e.max=tsToLocalInput(maxTs);
@@ -388,21 +489,30 @@
 
         applyFilter_DB();
       }catch(e){
-        fileError.style.display="block";
-        fileError.textContent=`SQLite 解析失败：${e.message}`;
+        const fe=document.getElementById("fileError");
+        fe.style.display="block";
+        fe.textContent=`SQLite 解析失败：${e.message}`;
+        console.error(e);
+        hideLoading();
         window.__TT_SQLDB__=null;
       }
     }
 
     async function loadFromFile(file){
       const name=(file?.name||"").toLowerCase();
-      if (name.endsWith(".json")){
-        try{ setTrackData(JSON.parse(await file.text()), file.name); }
-        catch(e){ const fe=document.getElementById("fileError"); fe.style.display="block"; fe.textContent=`JSON 解析失败：${e.message}`; }
-      } else if (name.endsWith(".db") || name.endsWith(".sqlite")){
-        await loadFromSQLite(file);
-      } else {
-        await loadFromSQLite(file);
+      try{
+        if (name.endsWith(".json")){
+          const txt = await file.text(); const json = JSON.parse(txt);
+          setTrackData(json, file.name);
+        } else {
+          await loadFromSQLite(file);
+        }
+      }catch(e){
+        const fe=document.getElementById("fileError");
+        fe.style.display="block";
+        fe.textContent=`文件加载失败：${e.message}`;
+        console.error(e);
+        hideLoading();
       }
     }
 
@@ -422,8 +532,6 @@
 
       setPanelCollapsed(localStorage.getItem("tt_panel_collapsed")==="1");
       document.getElementById("togglePanel").addEventListener("click",()=>setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed")));
-      document.querySelector(".panel-header").addEventListener("dblclick",()=>setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed")));
-      window.addEventListener("keydown",(e)=>{ if(e.key.toLowerCase()==="p"&&!e.repeat) setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed")); });
 
       document.getElementById("applyBtn").addEventListener("click",applyFilter);
       document.getElementById("resetBtn").addEventListener("click",resetRange);
@@ -434,9 +542,16 @@
       const dz=document.getElementById("dropzone");
       const prevent=ev=>{ ev.preventDefault(); ev.stopPropagation(); };
       ["dragenter","dragover","dragleave","drop"].forEach(evt=>dz.addEventListener(evt,prevent,false));
-      ["dragenter","dragover"].forEach(()=>dz.classList.add("dragover"));
-      ["dragleave","drop"].forEach(()=>dz.classList.remove("dragover"));
-      dz.addEventListener("drop",(ev)=>{ const f=ev.dataTransfer.files?.[0]; if (f) loadFromFile(f); });
+      dz.addEventListener("dragenter",()=>dz.classList.add("dragover"));
+      dz.addEventListener("dragover",()=>dz.classList.add("dragover"));
+      dz.addEventListener("dragleave",()=>dz.classList.remove("dragover"));
+      dz.addEventListener("drop",(ev)=>{ dz.classList.remove("dragover"); const f=ev.dataTransfer.files?.[0]; if (f) loadFromFile(f); });
+
+      if (location.protocol === 'file:'){
+        const fe=document.getElementById("fileError");
+        fe.style.display="block";
+        fe.textContent="提示：通过 http(s) 本地服务打开页面（如 python -m http.server 8080），避免第三方统计在 file:// 下的 CORS 报错。";
+      }
 
       loadFromInlineScript();
     }
