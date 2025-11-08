@@ -15,8 +15,29 @@
       background: rgba(15,15,15,0.7); border-radius: 12px; padding: 10px 14px;
       box-shadow: 0 12px 32px rgba(0,0,0,0.6); font-size: 13px; line-height: 1.4;
       max-width: 360px; backdrop-filter: blur(8px); color: #eee; user-select: none;
+      transition: transform .22s ease, opacity .22s ease, max-height .22s ease;
     }
     .panel b { color: #fff; font-weight: 600; font-size: 13px; }
+    .panel-header {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-title {
+      display: flex; align-items: center; gap: 8px; min-width: 0;
+    }
+    .mini {
+      font-size: 11px; color: #9aa4af; padding: 2px 6px; border-radius: 999px;
+      border: 1px solid #2b3138; background: rgba(0,0,0,.25);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
+    }
+    .toggle {
+      margin-left: auto;
+      border: 1px solid #30363d; background: #11141a; color: #e6edf3;
+      border-radius: 8px; padding: 4px 8px; cursor: pointer; font-size: 12px;
+    }
+    .toggle:hover { background: #171b22; }
+
+    .content { margin-top: 8px; }
+
     .row { margin-top: 8px; display: grid; gap: 6px; }
     .row label { font-size: 12px; color: #bbb; }
     .row input[type="datetime-local"] {
@@ -33,12 +54,21 @@
     .dropzone {
       margin-top: 8px; border: 1px dashed #3a3f44; border-radius: 10px; padding: 8px;
       text-align: center; font-size: 12px; color: #c9d1d9; background: rgba(13, 15, 22, 0.5);
+      transition: background .2s, border-color .2s;
     }
     .dropzone.dragover { border-color: #58a6ff; background: rgba(13, 15, 22, 0.8); }
     .filehint { font-size: 12px; color: #9aa4af; }
     .fileok { color: #59f; font-size: 12px; word-break: break-all; }
     .error { color: #ff6b6b; font-size: 12px; white-space: pre-wrap; }
     code { background: #0b0d12; padding: 1px 4px; border-radius: 4px; }
+
+    /* 收起状态：仅显示头部（标题 + 迷你统计 + 开关） */
+    .panel.collapsed {
+      padding: 8px 10px;
+      max-height: 48px;
+      overflow: hidden;
+    }
+    .panel.collapsed .content { display: none; }
   </style>
 
   <!-- 百度地图 WebGL API（替换 ak 为你的） -->
@@ -47,49 +77,56 @@
   <!-- sql.js（SQLite WASM） -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
 
-  <!-- 内联默认数据（可为空数组；“使用内联示例”会读这里） -->
+  <!-- 内联默认数据（可为空数组；页面初载会读取这里） -->
   <script id="trackData" type="application/json">[]</script>
 </head>
 <body>
   <div id="map"></div>
 
   <div class="panel" id="infoPanel">
-    <div><b>轨迹点预览</b></div>
-
-    <!-- 数据来源 -->
-    <div class="row">
-      <label>数据来源：</label>
-      <div class="btns">
-        <label class="btn" for="fileInput">选择文件（.json / .db / .sqlite）</label>
-        <!-- <button id="useInlineBtn" title="读取内联的 trackData JSON">使用内联示例</button> -->
+    <div class="panel-header">
+      <div class="panel-title">
+        <b>轨迹点预览</b>
+        <span id="miniStats" class="mini">—</span>
       </div>
-      <input id="fileInput" type="file" accept=".json,application/json,.db,.sqlite,application/octet-stream" style="display:none" />
-      <div class="dropzone" id="dropzone">拖拽 JSON 或 SQLite DB 文件到这里加载</div>
-      <div class="filehint">
-        JSON 结构：<code>[{ id, ts, lon_e6, lat_e6, ... }]</code>；
-        DB：需含表（如 <code>location</code>）并具备 <code>ts</code>/<code>lon_e6</code>/<code>lat_e6</code> 列（列名可兼容变体）。
-      </div>
-      <div id="fileStatus" class="fileok" style="display:none;"></div>
-      <div id="fileError" class="error" style="display:none;"></div>
+      <button id="togglePanel" class="toggle" aria-expanded="true" title="折叠/展开（快捷键：P）">收起</button>
     </div>
 
-    <!-- 时间筛选 -->
-    <div class="row">
-      <label>时间片段（本地时区）：</label>
-      <input id="startInput" type="datetime-local" step="1" />
-      <input id="endInput" type="datetime-local" step="1" />
-      <div class="btns">
-        <button id="applyBtn">应用筛选</button>
-        <button id="resetBtn" title="重置为全量区间">重置</button>
+    <div class="content">
+      <!-- 数据来源 -->
+      <div class="row">
+        <label>数据来源：</label>
+        <div class="btns">
+          <label class="btn" for="fileInput">选择文件（.json / .db / .sqlite）</label>
+        </div>
+        <input id="fileInput" type="file" accept=".json,application/json,.db,.sqlite,application/octet-stream" style="display:none" />
+        <div class="dropzone" id="dropzone">拖拽 JSON 或 SQLite DB 文件到这里加载</div>
+        <div class="filehint">
+          JSON 结构：<code>[{ id, ts, lon_e6, lat_e6, ... }]</code>；
+          DB：需含表（如 <code>location</code>）并具备 <code>ts</code>/<code>lon_e6</code>/<code>lat_e6</code> 列（列名可兼容变体）。
+        </div>
+        <div id="fileStatus" class="fileok" style="display:none;"></div>
+        <div id="fileError" class="error" style="display:none;"></div>
       </div>
-    </div>
 
-    <!-- 统计 -->
-    <div class="row">
-      <div id="statsCount">点数：-</div>
-      <div id="statsRange">时间范围：-</div>
-      <div class="muted">说明：按所选时间段过滤；所有点以图钉展示，无折线、无抽稀</div>
-      <div class="muted">坐标系：WGS84 → BD09</div>
+      <!-- 时间筛选 -->
+      <div class="row">
+        <label>时间片段（本地时区）：</label>
+        <input id="startInput" type="datetime-local" step="1" />
+        <input id="endInput" type="datetime-local" step="1" />
+        <div class="btns">
+          <button id="applyBtn">应用筛选</button>
+          <button id="resetBtn" title="重置为全量区间">重置</button>
+        </div>
+      </div>
+
+      <!-- 统计 -->
+      <div class="row">
+        <div id="statsCount">点数：-</div>
+        <div id="statsRange">时间范围：-</div>
+        <div class="muted">说明：按所选时间段过滤；所有点以图钉展示，无折线、无抽稀</div>
+        <div class="muted">坐标系：WGS84 → BD09</div>
+      </div>
     </div>
   </div>
 
@@ -187,6 +224,7 @@
         map.centerAndZoom(new BMapGL.Point(116.404, 39.915), 12);
         document.getElementById("statsCount").textContent = `点数：0`;
         document.getElementById("statsRange").textContent = `时间范围：-`;
+        document.getElementById("miniStats").textContent = `0 · —`;
         return;
       }
       map.setViewport(filtered.map(x => x.point));
@@ -233,10 +271,11 @@
       renderMarkers(buildBaiduPointsWithMeta(filteredRaw));
 
       const count = filteredRaw.length;
-      document.getElementById("statsCount").textContent = `点数：${count}`;
       const startTxt = (count > 0) ? tsToLocal(filteredRaw[0].ts) : "-";
       const endTxt   = (count > 0) ? tsToLocal(filteredRaw[count-1].ts) : "-";
+      document.getElementById("statsCount").textContent = `点数：${count}`;
       document.getElementById("statsRange").textContent = `时间范围：${startTxt} → ${endTxt}`;
+      document.getElementById("miniStats").textContent = `${count} · ${startTxt} → ${endTxt}`;
     }
 
     // DB 模式：WHERE ts BETWEEN ? AND ? 直查
@@ -258,6 +297,7 @@
         renderMarkers([]);
         document.getElementById("statsCount").textContent = `点数：0`;
         document.getElementById("statsRange").textContent = `时间范围：-`;
+        document.getElementById("miniStats").textContent = `0 · —`;
         return;
       }
       const cols = res[0].columns, rows = res[0].values;
@@ -273,10 +313,11 @@
 
       renderMarkers(buildBaiduPointsWithMeta(arr));
       const count = arr.length;
-      document.getElementById("statsCount").textContent = `点数：${count}`;
       const startTxt = (count > 0) ? tsToLocal(arr[0].ts) : "-";
       const endTxt   = (count > 0) ? tsToLocal(arr[count-1].ts) : "-";
+      document.getElementById("statsCount").textContent = `点数：${count}`;
       document.getElementById("statsRange").textContent = `时间范围：${startTxt} → ${endTxt}`;
+      document.getElementById("miniStats").textContent = `${count} · ${startTxt} → ${endTxt}`;
     }
 
     function applyFilter() {
@@ -318,7 +359,8 @@
       const s = document.getElementById("startInput"), e = document.getElementById("endInput");
       s.min = tsToLocalInput(minTs); s.max = tsToLocalInput(maxTs);
       e.min = tsToLocalInput(minTs); e.max = tsToLocalInput(maxTs);
-      resetRange();
+      s.value = tsToLocalInput(minTs); e.value = tsToLocalInput(maxTs);
+      applyFilter();
     }
 
     function loadFromInlineScript() {
@@ -450,6 +492,25 @@
     }
 
     /***********************
+     * 面板收起/展开
+     ***********************/
+    function setPanelCollapsed(collapsed) {
+      const panel = document.getElementById("infoPanel");
+      const btn = document.getElementById("togglePanel");
+      if (collapsed) {
+        panel.classList.add("collapsed");
+        btn.textContent = "展开";
+        btn.setAttribute("aria-expanded", "false");
+        localStorage.setItem("tt_panel_collapsed", "1");
+      } else {
+        panel.classList.remove("collapsed");
+        btn.textContent = "收起";
+        btn.setAttribute("aria-expanded", "true");
+        localStorage.setItem("tt_panel_collapsed", "0");
+      }
+    }
+
+    /***********************
      * 初始化
      ***********************/
     function init() {
@@ -459,14 +520,30 @@
       map.addControl(new BMapGL.ZoomControl());
       map.enableScrollWheelZoom(true);
 
+      // 面板折叠状态恢复
+      const savedCollapsed = localStorage.getItem("tt_panel_collapsed") === "1";
+      setPanelCollapsed(savedCollapsed);
+
+      // 折叠按钮 & 快捷键
+      document.getElementById("togglePanel").addEventListener("click", () => {
+        setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed"));
+      });
+      // 双击标题区域也可切换
+      document.querySelector(".panel-header").addEventListener("dblclick", () => {
+        setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed"));
+      });
+      // 快捷键：P
+      window.addEventListener("keydown", (e) => {
+        if (e.key.toLowerCase() === "p" && !e.repeat) {
+          setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed"));
+        }
+      });
+
       // 时间控件
       document.getElementById("applyBtn").addEventListener("click", applyFilter);
       document.getElementById("resetBtn").addEventListener("click", resetRange);
       document.getElementById("startInput").addEventListener("change", applyFilter);
       document.getElementById("endInput").addEventListener("change", applyFilter);
-
-      // 数据按钮
-      // document.getElementById("useInlineBtn").addEventListener("click", loadFromInlineScript);
 
       // 文件选择
       const fileInput = document.getElementById("fileInput");
@@ -486,7 +563,7 @@
         if (f) loadFromFile(f);
       });
 
-      // 默认尝试读取内联
+      // 默认读取内联数据
       loadFromInlineScript();
     }
 
