@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html, body, #map { width:100%; height:100%; margin:0; padding:0; background:#0f1117; color:#fff; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif; }
-    .panel { position:absolute; z-index:9999; left:12px; top:12px; background:rgba(15,15,15,0.7); border-radius:12px; padding:10px 14px; box-shadow:0 12px 32px rgba(0,0,0,0.6); font-size:13px; line-height:1.4; max-width:360px; backdrop-filter:blur(8px); color:#eee; user-select:none; transition:transform .22s ease, opacity .22s ease, max-height .22s ease; }
+    .panel { position:absolute; z-index:9999; left:12px; top:12px; background:rgba(15,15,15,0.7); border-radius:12px; padding:10px 14px; box-shadow:0 12px 32px rgba(0,0,0,0.6); font-size:13px; line-height:1.4; max-width:360px; backdrop-filter:blur(8px); color:#eee; user-select:none; transition:transform .22s ease, opacity .22s ease, max-height .22s ease, padding .22s ease; }
     .panel b { color:#fff; font-weight:600; font-size:13px; }
-    .panel-header { display:flex; align-items:center; gap:8px; }
+    .panel-header { display:flex; align-items:center; gap:8px; cursor:default; }
     .panel-title { display:flex; align-items:center; gap:8px; min-width:0; }
     .mini { font-size:11px; color:#9aa4af; padding:2px 6px; border-radius:999px; border:1px solid #2b3138; background:rgba(0,0,0,.25); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
     .toggle { margin-left:auto; border:1px solid #30363d; background:#11141a; color:#e6edf3; border-radius:8px; padding:4px 8px; cursor:pointer; font-size:12px; }
@@ -24,11 +24,17 @@
     .dropzone.dragover { border-color:#58a6ff; background:rgba(13,15,22,0.8); }
     .fileok { color:#59f; font-size:12px; word-break:break-all; }
     .error { color:#ff6b6b; font-size:12px; white-space:pre-wrap; }
+
+    /* 加载遮罩 */
     .loading { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); z-index: 99999; backdrop-filter: blur(2px); }
     .loading.show { display: flex; }
     .spinner { width: 56px; height: 56px; border-radius: 50%; border: 6px solid rgba(255,255,255,0.2); border-top-color: #58a6ff; animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { margin-top: 12px; color: #c9d1d9; font-size: 12px; text-align: center; }
+
+    /* 折叠态样式（关键修复） */
+    .panel.collapsed { padding:8px 10px; max-height:48px; overflow:hidden; }
+    .panel.collapsed .content { display:none; }
   </style>
 
   <!-- 百度地图 WebGL API（替换 ak 为你的） -->
@@ -43,12 +49,12 @@
   <div id="map"></div>
 
   <div class="panel" id="infoPanel">
-    <div class="panel-header">
+    <div class="panel-header" title="双击标题栏可折叠/展开">
       <div class="panel-title">
         <b>轨迹点预览（只画点）</b>
         <span id="miniStats" class="mini">—</span>
       </div>
-      <button id="togglePanel" class="toggle" aria-expanded="true">收起</button>
+      <button id="togglePanel" class="toggle" aria-expanded="false">收起</button>
     </div>
 
     <div class="content">
@@ -162,10 +168,10 @@
           if (j>=0) return j;
         } return -1;
       };
-      const tidx=idx(['timestamp','time_ms','time','ts','times','datetime','date','timeString'.toLowerCase()]);
+      const tidx=idx(['timestamp','time_ms','time','ts','times','datetime','date','timestring']);
       const lonIdx=idx(['longitude','lon','lng','lon_e6']);
       const latIdx=idx(['latitude','lat','lat_e6']);
-      const gcjIdx=idx(['isMarsLocation','gcj','gcj02','is_gcj']);
+      const gcjIdx=idx(['ismarslocation','gcj','gcj02','is_gcj']);
       const out=[];
       for (let i=1;i<lines.length;i++){
         const cols=splitCSVLine(lines[i]);
@@ -184,7 +190,7 @@
             if (Number.isFinite(t2)) ts=t2;
           }
         }
-        if (!Number.isFinite(ts)) ts = Date.now() + i; // 没时间也能画，给个递增时间
+        if (!Number.isFinite(ts)) ts = Date.now() + i;
         const useDeg = Math.abs(lonV)<=180 && Math.abs(latV)<=90;
         const obj = useDeg
           ? { ts, longitude: lonV, latitude: latV }
@@ -203,7 +209,6 @@
       const doc = new DOMParser().parseFromString(text, 'application/xml');
       const out=[];
       const pick = (el)=>el ? el.textContent.trim() : '';
-      // trkpt
       const trkpts = Array.from(doc.getElementsByTagName('trkpt'));
       for (const p of trkpts){
         const lat = num(p.getAttribute('lat'));
@@ -215,7 +220,6 @@
           out.push({ ts: tsFinal, latitude: lat, longitude: lon });
         }
       }
-      // wpt
       const wpts = Array.from(doc.getElementsByTagName('wpt'));
       for (const p of wpts){
         const lat = num(p.getAttribute('lat'));
@@ -235,10 +239,8 @@
     function parseKML(text){
       const doc = new DOMParser().parseFromString(text, 'application/xml');
       const out=[];
-      const ns = (el, name)=>Array.from(el.getElementsByTagName(name));
       const txt = el=> (el? el.textContent.trim() : '');
 
-      // gx:Track (when + gx:coord)
       const tracks = doc.getElementsByTagNameNS('*','Track');
       for (const trk of tracks){
         const when = Array.from(trk.getElementsByTagName('when')).map(e=>txt(e));
@@ -254,8 +256,6 @@
           }
         }
       }
-
-      // LineString coordinates（可能无时间，按顺序给时间）
       const lines = doc.getElementsByTagName('LineString');
       for (const ls of lines){
         const coordNode = ls.getElementsByTagName('coordinates')[0];
@@ -269,8 +269,6 @@
           }
         }
       }
-
-      // Point coordinates
       const points = doc.getElementsByTagName('Point');
       for (const pt of points){
         const coordNode = pt.getElementsByTagName('coordinates')[0];
@@ -666,16 +664,16 @@
           const arr = parseKML(txt);
           setTrackData(arr, file.name);
         } else {
-          // 尝试按文本猜测
           const txt = await file.text();
-          if (txt.trim().startsWith('{') || txt.trim().startsWith('[')){
-            setTrackData(JSON.parse(txt), file.name);
-          } else if (txt.includes('<gpx')){
-            setTrackData(parseGPX(txt), file.name);
-          } else if (txt.includes('<kml')){
-            setTrackData(parseKML(txt), file.name);
-          } else if (txt.includes(',') && txt.split('\n')[0].includes(',')){
-            setTrackData(parseCSV(txt), file.name);
+          const trimmed = txt.trim();
+          if (trimmed.startsWith('{') || trimmed.startsWith('[')){
+            setTrackData(JSON.parse(trimmed), file.name);
+          } else if (/^\s*<\?xml|<gpx/i.test(trimmed)){
+            setTrackData(parseGPX(trimmed), file.name);
+          } else if (/^\s*<kml/i.test(trimmed)){
+            setTrackData(parseKML(trimmed), file.name);
+          } else if (trimmed.includes(',') && trimmed.split('\n')[0].includes(',')){
+            setTrackData(parseCSV(trimmed), file.name);
           } else {
             throw new Error("未知格式：请提供 JSON/SQLite/CSV/GPX/KML");
           }
@@ -693,8 +691,17 @@
     function setPanelCollapsed(collapsed){
       const panel=document.getElementById("infoPanel");
       const btn=document.getElementById("togglePanel");
-      if (collapsed){ panel.classList.add("collapsed"); btn.textContent="展开"; btn.setAttribute("aria-expanded","false"); localStorage.setItem("tt_panel_collapsed","1"); }
-      else { panel.classList.remove("collapsed"); btn.textContent="收起"; btn.setAttribute("aria-expanded","true"); localStorage.setItem("tt_panel_collapsed","0"); }
+      if (collapsed){
+        panel.classList.add("collapsed");
+        btn.textContent="展开";
+        btn.setAttribute("aria-expanded","false");
+        localStorage.setItem("tt_panel_collapsed","1");
+      } else {
+        panel.classList.remove("collapsed");
+        btn.textContent="收起";
+        btn.setAttribute("aria-expanded","true");
+        localStorage.setItem("tt_panel_collapsed","0");
+      }
     }
 
     function init(){
@@ -704,7 +711,13 @@
       map.enableScrollWheelZoom(true);
 
       setPanelCollapsed(localStorage.getItem("tt_panel_collapsed")==="1");
-      document.getElementById("togglePanel").addEventListener("click",()=>setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed")));
+
+      document.getElementById("togglePanel").addEventListener("click",()=>{
+        setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed"));
+      });
+      document.querySelector(".panel-header").addEventListener("dblclick", ()=>{
+        setPanelCollapsed(!document.getElementById("infoPanel").classList.contains("collapsed"));
+      });
 
       document.getElementById("applyBtn").addEventListener("click",applyFilter);
       document.getElementById("resetBtn").addEventListener("click",resetRange);
