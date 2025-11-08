@@ -2,16 +2,11 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>轨迹预览（时间+坐标；只画点，海量点自适应）</title>
+  <title>轨迹预览（时间+坐标；只画点，海量点自适应 | 支持 CSV/GPX/KML）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html, body, #map { width:100%; height:100%; margin:0; padding:0; background:#0f1117; color:#fff; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif; }
-    .panel {
-      position:absolute; z-index:9999; left:12px; top:12px; background:rgba(15,15,15,0.7);
-      border-radius:12px; padding:10px 14px; box-shadow:0 12px 32px rgba(0,0,0,0.6);
-      font-size:13px; line-height:1.4; max-width:360px; backdrop-filter:blur(8px); color:#eee; user-select:none;
-      transition:transform .22s ease, opacity .22s ease, max-height .22s ease;
-    }
+    .panel { position:absolute; z-index:9999; left:12px; top:12px; background:rgba(15,15,15,0.7); border-radius:12px; padding:10px 14px; box-shadow:0 12px 32px rgba(0,0,0,0.6); font-size:13px; line-height:1.4; max-width:360px; backdrop-filter:blur(8px); color:#eee; user-select:none; transition:transform .22s ease, opacity .22s ease, max-height .22s ease; }
     .panel b { color:#fff; font-weight:600; font-size:13px; }
     .panel-header { display:flex; align-items:center; gap:8px; }
     .panel-title { display:flex; align-items:center; gap:8px; min-width:0; }
@@ -29,8 +24,6 @@
     .dropzone.dragover { border-color:#58a6ff; background:rgba(13,15,22,0.8); }
     .fileok { color:#59f; font-size:12px; word-break:break-all; }
     .error { color:#ff6b6b; font-size:12px; white-space:pre-wrap; }
-
-    /* 加载遮罩 */
     .loading { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); z-index: 99999; backdrop-filter: blur(2px); }
     .loading.show { display: flex; }
     .spinner { width: 56px; height: 56px; border-radius: 50%; border: 6px solid rgba(255,255,255,0.2); border-top-color: #58a6ff; animation: spin 0.9s linear infinite; }
@@ -61,13 +54,17 @@
     <div class="content">
       <div class="row">
         <div class="btns">
-          <label class="btn" for="fileInput">选择文件（.json / .db / .sqlite）</label>
+          <label class="btn" for="fileInput">选择文件（.json / .db / .sqlite / .csv / .gpx / .kml）</label>
         </div>
-        <input id="fileInput" type="file" accept=".json,application/json,.db,.sqlite,application/octet-stream" style="display:none" />
-        <div class="dropzone" id="dropzone">拖拽 JSON 或 SQLite DB 文件到这里加载</div>
+        <input id="fileInput" type="file"
+               accept=".json,application/json,.db,.sqlite,application/octet-stream,.csv,text/csv,.gpx,application/gpx+xml,.kml,application/vnd.google-earth.kml+xml"
+               style="display:none" />
+        <div class="dropzone" id="dropzone">拖拽 JSON / SQLite / CSV / GPX / KML 文件到这里加载</div>
         <div class="muted">
-          JSON：<code>timestamp / timeString / ts</code> + <code>longitude|lon / latitude|lat</code>（或 <code>lon_e6 / lat_e6</code>）；<br/>
-          SQLite：至少包含 时间/经度/纬度；秒/毫秒自动识别；可选 <code>gcj02*</code>/<code>isMarsLocation</code>。
+          JSON/CSV：列包含 <code>timestamp/time/ts/timeString</code> 与 <code>longitude|lon / latitude|lat</code>（或 <code>lon_e6 / lat_e6</code>）；<br/>
+          GPX：读取 <code>&lt;trkpt lat="…" lon="…"&gt;&lt;time&gt;…&lt;/time&gt;</code> 与 <code>&lt;wpt&gt;</code>；<br/>
+          KML：读取 <code>gx:Track</code> 的 <code>when</code>/<code>gx:coord</code>，或 <code>LineString/Point.coordinates</code>；<br/>
+          SQLite：至少包含 时间/经度/纬度；支持秒/毫秒识别；可选 <code>gcj02*</code>/<code>isMarsLocation</code>。
         </div>
         <div id="fileStatus" class="fileok" style="display:none;"></div>
         <div id="fileError" class="error" style="display:none;"></div>
@@ -86,12 +83,11 @@
       <div class="row">
         <div id="statsCount">点数：-</div>
         <div id="statsRange">时间范围：-</div>
-        <div class="muted">小于 1000：Marker；≥1000：海量点（PointCollection）；若不可用则回退 Canvas 海量点。</div>
+        <div class="muted">小于 1000：Marker；≥1000：PointCollection；若不可用则回退 Canvas 海量点。</div>
       </div>
     </div>
   </div>
 
-  <!-- 加载遮罩 -->
   <div id="loading" class="loading" aria-live="polite" aria-busy="true">
     <div>
       <div class="spinner"></div>
@@ -117,12 +113,17 @@
     function tsToLocal(ts){const d=new Date(ts);return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;}
     function tsToLocalInput(ts){const d=new Date(ts);return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;}
     function inputToTs(val){ if(!val) return null; const t=new Date(val).getTime(); return Number.isFinite(t)?t:null; }
+    const num = x => (x==null || x==="") ? NaN : Number(x);
 
-    /************ 兼容解析（仅保留 时间+坐标）************/
+    /************ 兼容解析：时间/坐标抽取（JSON/CSV/GPX/KML 通用）************/
     function parseTsFlexible(p){
       if (Number.isFinite(p.ts)) return p.ts<1e12?p.ts*1000:p.ts;
       if (Number.isFinite(p.timestamp)) return p.timestamp<1e12?p.timestamp*1000:p.timestamp;
-      if (p.timeString){ const d=new Date(p.timeString.replace(" ","T")); const t=d.getTime(); if(Number.isFinite(t)) return t; }
+      if (p.time_ms && Number.isFinite(p.time_ms)) return Number(p.time_ms);
+      if (p.time && Number.isFinite(p.time)) return (p.time<1e12? p.time*1000 : p.time);
+      if (typeof p.timeString === 'string'){ const d=new Date(p.timeString.replace(" ","T")); const t=d.getTime(); if(Number.isFinite(t)) return t; }
+      if (typeof p.datetime === 'string'){ const t=new Date(p.datetime).getTime(); if (Number.isFinite(t)) return t; }
+      if (typeof p.date === 'string'){ const t=new Date(p.date).getTime(); if (Number.isFinite(t)) return t; }
       return NaN;
     }
     function pickDegFlexible(p){
@@ -130,7 +131,157 @@
       if (Number.isFinite(p.gcj02latitude) && Number.isFinite(p.gcj02longitude)) return {lng:+p.gcj02longitude, lat:+p.gcj02latitude, gcj:true};
       if (Number.isFinite(p.lon_e6) && Number.isFinite(p.lat_e6)) return {lng:p.lon_e6/1e6, lat:p.lat_e6/1e6, gcj:false};
       if (Number.isFinite(p.lat) && Number.isFinite(p.lon)) return {lng:+p.lon, lat:+p.lat, gcj:false};
+      if (Number.isFinite(p.lng) && Number.isFinite(p.lat)) return {lng:+p.lng, lat:+p.lat, gcj:false};
       return null;
+    }
+
+    /************ CSV 解析 ************/
+    function splitCSVLine(line){
+      const out=[]; let cur=''; let inQ=false;
+      for (let i=0;i<line.length;i++){
+        const ch=line[i];
+        if (ch==='\"'){
+          if (inQ && line[i+1]==='\"'){ cur+='\"'; i++; }
+          else inQ=!inQ;
+        } else if (ch===',' && !inQ){
+          out.push(cur); cur='';
+        } else {
+          cur+=ch;
+        }
+      }
+      out.push(cur);
+      return out.map(s=>s.trim());
+    }
+    function parseCSV(text){
+      const lines=text.replace(/\r\n?/g,'\n').split('\n').filter(l=>l.trim().length>0);
+      if (lines.length===0) return [];
+      const header=splitCSVLine(lines[0]).map(h=>h.trim().toLowerCase());
+      const idx = nameList=>{
+        for (const n of nameList){
+          const k=n.toLowerCase(); const j=header.indexOf(k);
+          if (j>=0) return j;
+        } return -1;
+      };
+      const tidx=idx(['timestamp','time_ms','time','ts','times','datetime','date','timeString'.toLowerCase()]);
+      const lonIdx=idx(['longitude','lon','lng','lon_e6']);
+      const latIdx=idx(['latitude','lat','lat_e6']);
+      const gcjIdx=idx(['isMarsLocation','gcj','gcj02','is_gcj']);
+      const out=[];
+      for (let i=1;i<lines.length;i++){
+        const cols=splitCSVLine(lines[i]);
+        const lonRaw = lonIdx>=0? cols[lonIdx] : null;
+        const latRaw = latIdx>=0? cols[latIdx] : null;
+        if (lonRaw==null || latRaw==null) continue;
+        const lonV = num(lonRaw), latV = num(latRaw);
+        let ts = NaN;
+        if (tidx>=0){
+          const tv = cols[tidx];
+          const n = Number(tv);
+          if (Number.isFinite(n)){
+            ts = (n<1e12 ? n*1000 : n);
+          }else{
+            const t2=new Date(String(tv).replace(' ','T')).getTime();
+            if (Number.isFinite(t2)) ts=t2;
+          }
+        }
+        if (!Number.isFinite(ts)) ts = Date.now() + i; // 没时间也能画，给个递增时间
+        const useDeg = Math.abs(lonV)<=180 && Math.abs(latV)<=90;
+        const obj = useDeg
+          ? { ts, longitude: lonV, latitude: latV }
+          : { ts, lon_e6: Math.round(lonV), lat_e6: Math.round(latV) };
+        if (gcjIdx>=0){
+          const flag=cols[gcjIdx]; const b = String(flag).trim();
+          if (b==='1' || /^true$/i.test(b)) obj.gcj = true;
+        }
+        out.push(obj);
+      }
+      return out;
+    }
+
+    /************ GPX 解析 ************/
+    function parseGPX(text){
+      const doc = new DOMParser().parseFromString(text, 'application/xml');
+      const out=[];
+      const pick = (el)=>el ? el.textContent.trim() : '';
+      // trkpt
+      const trkpts = Array.from(doc.getElementsByTagName('trkpt'));
+      for (const p of trkpts){
+        const lat = num(p.getAttribute('lat'));
+        const lon = num(p.getAttribute('lon'));
+        const t = pick(p.getElementsByTagName('time')[0]||null);
+        const ts = Number.isFinite(Number(t)) ? (Number(t)<1e12?Number(t)*1000:Number(t)) : new Date(t).getTime();
+        const tsFinal = Number.isFinite(ts)? ts : (Date.now()+out.length);
+        if (Number.isFinite(lat) && Number.isFinite(lon)){
+          out.push({ ts: tsFinal, latitude: lat, longitude: lon });
+        }
+      }
+      // wpt
+      const wpts = Array.from(doc.getElementsByTagName('wpt'));
+      for (const p of wpts){
+        const lat = num(p.getAttribute('lat'));
+        const lon = num(p.getAttribute('lon'));
+        const tEl = p.getElementsByTagName('time')[0]||null;
+        const t = tEl ? tEl.textContent.trim() : '';
+        const ts = Number.isFinite(Number(t)) ? (Number(t)<1e12?Number(t)*1000:Number(t)) : new Date(t).getTime();
+        const tsFinal = Number.isFinite(ts)? ts : (Date.now()+out.length);
+        if (Number.isFinite(lat) && Number.isFinite(lon)){
+          out.push({ ts: tsFinal, latitude: lat, longitude: lon });
+        }
+      }
+      return out;
+    }
+
+    /************ KML 解析 ************/
+    function parseKML(text){
+      const doc = new DOMParser().parseFromString(text, 'application/xml');
+      const out=[];
+      const ns = (el, name)=>Array.from(el.getElementsByTagName(name));
+      const txt = el=> (el? el.textContent.trim() : '');
+
+      // gx:Track (when + gx:coord)
+      const tracks = doc.getElementsByTagNameNS('*','Track');
+      for (const trk of tracks){
+        const when = Array.from(trk.getElementsByTagName('when')).map(e=>txt(e));
+        const coords = Array.from(trk.getElementsByTagNameNS('*','coord')).map(e=>txt(e));
+        const m = Math.min(when.length, coords.length);
+        for (let i=0;i<m;i++){
+          const ts = new Date(when[i]).getTime();
+          const parts = coords[i].split(/\s+/).map(Number); // lon lat alt
+          const lon=parts[0], lat=parts[1];
+          if (Number.isFinite(lon)&&Number.isFinite(lat)){
+            const tsFinal = Number.isFinite(ts)?ts:(Date.now()+out.length);
+            out.push({ ts: tsFinal, longitude: lon, latitude: lat });
+          }
+        }
+      }
+
+      // LineString coordinates（可能无时间，按顺序给时间）
+      const lines = doc.getElementsByTagName('LineString');
+      for (const ls of lines){
+        const coordNode = ls.getElementsByTagName('coordinates')[0];
+        if (!coordNode) continue;
+        const list = coordNode.textContent.trim().split(/\s+/);
+        for (let i=0;i<list.length;i++){
+          const parts = list[i].split(',').map(Number); // lon,lat,alt
+          const lon=parts[0], lat=parts[1];
+          if (Number.isFinite(lon)&&Number.isFinite(lat)){
+            out.push({ ts: Date.now()+out.length, longitude: lon, latitude: lat });
+          }
+        }
+      }
+
+      // Point coordinates
+      const points = doc.getElementsByTagName('Point');
+      for (const pt of points){
+        const coordNode = pt.getElementsByTagName('coordinates')[0];
+        if (!coordNode) continue;
+        const parts = coordNode.textContent.trim().split(',').map(Number);
+        const lon=parts[0], lat=parts[1];
+        if (Number.isFinite(lon)&&Number.isFinite(lat)){
+          out.push({ ts: Date.now()+out.length, longitude: lon, latitude: lat });
+        }
+      }
+      return out;
     }
 
     /************ 全局状态 ************/
@@ -162,21 +313,18 @@
         this._canvas = null;
         this._ctx = null;
         this._bindedDraw = this.draw.bind(this);
-        this._resizeObserver = null;
       }
       initialize(map){
         this._map = map;
         const canvas = this._canvas = document.createElement('canvas');
         canvas.style.position = 'absolute';
         canvas.style.left = 0; canvas.style.top = 0;
-        canvas.style.pointerEvents = 'none'; // 仅展示，不拦截事件
+        canvas.style.pointerEvents = 'none';
         this._ctx = canvas.getContext('2d');
         map.getPanes().labelPane.appendChild(canvas);
-        // 监听地图事件更新
         map.addEventListener('zoomend', this._bindedDraw);
         map.addEventListener('moveend', this._bindedDraw);
         map.addEventListener('resize', this._bindedDraw);
-        // 初始尺寸
         this._syncSize();
         return canvas;
       }
@@ -196,7 +344,6 @@
         const radius = this.radius;
         ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
         ctx.fillStyle = this.color;
-        // 视窗裁剪：仅绘制屏内点
         const bounds = this._map.getBounds();
         for (let i=0;i<this.points.length;i++){
           const p = this.points[i];
@@ -251,7 +398,6 @@
       const { sizeSmall, shapeCircle, hasPC } = getPointConsts();
 
       if (arr.length < 1000){
-        // 逐点 Marker（含起终点标注）
         const first = new BMapGL.Marker(pts[0]); first.setTitle("起点"); map.addOverlay(first); smallMarkers.push(first);
         const firstLabel=new BMapGL.Label("起点",{position:pts[0],offset:new BMapGL.Size(10,-20)});
         firstLabel.setStyle({color:"#00E0FF",backgroundColor:"rgba(0,0,0,0.6)",border:"1px solid #00E0FF",borderRadius:"6px",padding:"2px 4px",fontSize:"12px",lineHeight:"14px"});
@@ -270,7 +416,6 @@
           map.addOverlay(lastLabel); smallMarkers.push(lastLabel);
         }
       } else if (hasPC && sizeSmall!=null && shapeCircle!=null){
-        // 海量点（官方 PointCollection）
         const opts = { size: sizeSmall, shape: shapeCircle, color: '#5ab1ff' };
         const pc = new BMapGL.PointCollection(pts, opts);
         pc.addEventListener('click', e=>{
@@ -284,7 +429,6 @@
         map.addOverlay(pc);
         bigLayer = pc;
       } else {
-        // 回退：Canvas 海量点（只画点）
         const dots = new CanvasDots(pts, '#5ab1ff', 2);
         map.addOverlay(dots);
         canvasLayer = dots;
@@ -311,7 +455,7 @@
       });
     }
 
-    /************ 过滤（DB，prepare/bind/step） ************/
+    /************ 过滤（DB） ************/
     function applyFilter_DB(){
       const sess=window.__TT_SQLDB__; if (!sess){ applyFilter_JSON(); return; }
       showLoading("数据库查询与渲染中…");
@@ -374,14 +518,14 @@
 
     /************ 数据加载（仅保留时间+坐标） ************/
     function setTrackData(arr, sourceLabel="内联/JSON"){
-      showLoading("解析 JSON…");
+      showLoading("解析数据…");
       window.__TT_SQLDB__=null;
-      if (!Array.isArray(arr)) { hideLoading(); throw new Error("JSON 顶层必须是数组"); }
+      if (!Array.isArray(arr)) { hideLoading(); throw new Error("数据需为数组"); }
       const cleaned=[];
       for (const p of arr){
         const ts=parseTsFlexible(p), deg=pickDegFlexible(p);
         if (!Number.isFinite(ts) || !deg) continue;
-        cleaned.push({ ts: (ts<1e12?ts*1000:ts), lon_e6: Math.round(deg.lng*1e6), lat_e6: Math.round(deg.lat*1e6), __gcj: !!deg.gcj });
+        cleaned.push({ ts: (ts<1e12?ts*1000:ts), lon_e6: Math.round(deg.lng*1e6), lat_e6: Math.round(deg.lat*1e6), __gcj: !!(p.__gcj || p.gcj) });
       }
       cleaned.sort((a,b)=>a.ts-b.ts);
       if (cleaned.length>0){ minTs=cleaned[0].ts; maxTs=cleaned[cleaned.length-1].ts; }
@@ -421,7 +565,6 @@
       const fileError=document.getElementById("fileError");
       const fileStatus=document.getElementById("fileStatus");
       fileError.style.display="none"; fileStatus.style.display="none";
-
       showLoading("加载 SQLite…");
       try{
         const SQL=await initSqlJsOnce();
@@ -498,14 +641,44 @@
       }
     }
 
+    /************ 文件加载分发：JSON / SQLite / CSV / GPX / KML ************/
     async function loadFromFile(file){
       const name=(file?.name||"").toLowerCase();
       try{
         if (name.endsWith(".json")){
           const txt = await file.text(); const json = JSON.parse(txt);
           setTrackData(json, file.name);
-        } else {
+        } else if (name.endsWith(".db") || name.endsWith(".sqlite")){
           await loadFromSQLite(file);
+        } else if (name.endsWith(".csv")){
+          showLoading("解析 CSV…");
+          const txt = await file.text();
+          const arr = parseCSV(txt);
+          setTrackData(arr, file.name);
+        } else if (name.endsWith(".gpx")){
+          showLoading("解析 GPX…");
+          const txt = await file.text();
+          const arr = parseGPX(txt);
+          setTrackData(arr, file.name);
+        } else if (name.endsWith(".kml")){
+          showLoading("解析 KML…");
+          const txt = await file.text();
+          const arr = parseKML(txt);
+          setTrackData(arr, file.name);
+        } else {
+          // 尝试按文本猜测
+          const txt = await file.text();
+          if (txt.trim().startsWith('{') || txt.trim().startsWith('[')){
+            setTrackData(JSON.parse(txt), file.name);
+          } else if (txt.includes('<gpx')){
+            setTrackData(parseGPX(txt), file.name);
+          } else if (txt.includes('<kml')){
+            setTrackData(parseKML(txt), file.name);
+          } else if (txt.includes(',') && txt.split('\n')[0].includes(',')){
+            setTrackData(parseCSV(txt), file.name);
+          } else {
+            throw new Error("未知格式：请提供 JSON/SQLite/CSV/GPX/KML");
+          }
         }
       }catch(e){
         const fe=document.getElementById("fileError");
@@ -550,7 +723,7 @@
       if (location.protocol === 'file:'){
         const fe=document.getElementById("fileError");
         fe.style.display="block";
-        fe.textContent="提示：通过 http(s) 本地服务打开页面（如 python -m http.server 8080），避免第三方统计在 file:// 下的 CORS 报错。";
+        fe.textContent="提示：请通过 http(s) 本地服务打开（如 python -m http.server 8080），避免 file:// 下第三方统计的 CORS 报错。";
       }
 
       loadFromInlineScript();
