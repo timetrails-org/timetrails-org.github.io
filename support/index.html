@@ -1,232 +1,157 @@
 <!doctype html>
-<html lang="en" class="no-js">
+<html lang="zh-Hans">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TimeTrails — Support</title>
-    <meta name="description" content="Help center for TimeTrails. FAQs, troubleshooting, contact, data export, and status." />
-    <meta name="robots" content="index,follow" />
-    <meta name="theme-color" content="#0ea5e9" />
-
-    <!-- Open Graph / Twitter -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="TimeTrails — Support" />
-    <meta property="og:description" content="FAQs, troubleshooting, contact, data export, and status." />
-    <meta property="og:url" content="https://<your-username>.github.io/timetrails/support.html" />
-    <meta property="og:image" content="https://<your-username>.github.io/timetrails/assets/og-image.png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="icon" href="/timetrails/assets/favicon.png" />
-
-    <style>
-        :root{--bg:#0b1020;--card:#111827;--muted:#93a4b7;--text:#e6eef9;--accent:#22d3ee;--link:#7dd3fc;--brand:#0ea5e9}
-        @media (prefers-color-scheme: light){:root{--bg:#f8fafc;--card:#ffffff;--muted:#4b5563;--text:#0f172a;--accent:#0ea5e9;--link:#0369a1;--brand:#0284c7}}
-        *{box-sizing:border-box}
-        html,body{margin:0;padding:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"}
-        a{color:var(--link); text-decoration:none}
-        a:hover{text-decoration:underline}
-        .wrap{max-width:980px; margin:0 auto; padding:32px 16px}
-        .nav{display:flex; justify-content:space-between; align-items:center; gap:16px}
-        .logo{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px}
-        .logo img{width:28px; height:28px}
-        .nav a{opacity:.9}
-
-        h1{font-size:clamp(28px,3.4vw,40px); margin:16px 0 6px}
-        p{line-height:1.75}
-        .muted{color:var(--muted)}
-
-        .grid{display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:20px}
-        .card{background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:20px}
-        .card h3{margin:0 0 6px; font-size:18px}
-        .card p{margin:6px 0 0; color:var(--muted)}
-
-        .section{margin-top:40px}
-        .kvs{display:grid; grid-template-columns: 160px 1fr; gap:10px 16px}
-
-        .faq details{background:var(--card); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:14px 16px}
-        .faq details+details{margin-top:10px}
-        .faq summary{cursor:pointer; font-weight:600}
-
-        .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.16); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); color:var(--text); font-weight:600}
-        .btn:hover{transform:translateY(-1px)}
-
-        .footer{margin-top:56px; font-size:13px; color:var(--muted)}
-
-        @media (max-width: 900px){.grid{grid-template-columns:1fr}}
-    </style>
-
-    <script type="application/ld+json">
-        {
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            "mainEntity": [
-                {"@type": "Question","name": "How do I export my data?","acceptedAnswer": {"@type": "Answer","text": "In Settings → Data → Export, choose GPX or CSV and select a date range. The file saves to Files app or shares via the iOS share sheet."}},
-                {"@type": "Question","name": "Does TimeTrails work offline?","acceptedAnswer": {"@type": "Answer","text": "Yes, trails are recorded on-device and visualized offline. Optional iCloud sync requires connectivity."}},
-                {"@type": "Question","name": "How can I reset the app?","acceptedAnswer": {"@type": "Answer","text": "Go to Settings → Advanced → Reset local data (this is irreversible). If sync is enabled, disable it first to avoid re-downloading data."}}
-            ]
-        }
-    </script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>技术支持 — 时光轨迹 TimeTrails</title>
+<meta name="description" content="时光轨迹（TimeTrails）技术支持：常见问题、定位与耗电排查、iCloud 备份与换机恢复、反馈方式与联系邮箱。" />
+<meta name="theme-color" content="#0ea5e9" />
+<meta name="robots" content="index,follow" />
+<meta property="og:title" content="技术支持 — 时光轨迹 TimeTrails" />
+<meta property="og:description" content="常见问题、故障排查与联系方式。" />
+<meta property="og:url" content="https://timetrails.sxxw.site/support/" />
+<link rel="icon" href="/assets/logo.svg" type="image/svg+xml" />
+<link rel="canonical" href="https://timetrails.sxxw.site/support/" />
+<link rel="stylesheet" href="/assets/site.css" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"定位没有被记录怎么办？","acceptedAnswer":{"@type":"Answer","text":"请在 设置 → 隐私与安全性 → 定位服务 → 时光轨迹 中，将权限设为“始终”并开启“精确位置”；同时开启后台 App 刷新，关闭低电量模式。"}},
+{"@type":"Question","name":"iCloud 数据同步失败或同步不下来？","acceptedAnswer":{"@type":"Answer","text":"请确认各设备登录的是同一个 Apple ID、已开启 iCloud、网络正常，并在同步时保持 App 在前台。换机/重装后本地为空时，会提示从 iCloud 恢复。"}},
+{"@type":"Question","name":"删除的轨迹点会怎样？","acceptedAnswer":{"@type":"Answer","text":"删除是“隐藏”而非物理删除：被删的点不再显示、不参与统计与迷雾，且该状态会跨设备同步。"}}
+]}
+</script>
 </head>
 <body>
-<div class="wrap">
-    <!-- Nav -->
-    <nav class="nav">
-        <a class="logo" href="./">
-            <img src="/timetrails/assets/logo.png" alt="TimeTrails logo" />
-            <span>TimeTrails</span>
-        </a>
-        <div style="display:flex; gap:14px; flex-wrap:wrap">
-            <a href="./">Home</a>
-            <a href="./privacy.html">Privacy</a>
-            <a href="./support.html" aria-current="page">Support</a>
+
+<nav class="nav">
+  <div class="container">
+    <a class="brand" href="/"><img src="/assets/logo.svg" alt="" /><span>TimeTrails</span><span class="zh">时光轨迹</span></a>
+    <div class="nav-links">
+      <a href="/">首页</a>
+      <a href="#faq">常见问题</a>
+      <a href="/privacy/">隐私</a>
+      <a class="nav-cta" href="mailto:neverfall@foxmail.com">联系我们</a>
+    </div>
+  </div>
+</nav>
+
+<header class="page-hero">
+  <div class="container">
+    <span class="eyebrow"><span class="dot"></span>技术支持</span>
+    <h1>我们随时在这里</h1>
+    <p>遇到问题或有想法？先看看下面的常见问题，或直接联系我们——通常 1–2 个工作日内回复。</p>
+  </div>
+</header>
+
+<main class="container" style="padding-bottom:20px">
+
+  <!-- 联系方式 -->
+  <section class="section" style="padding-top:28px" id="contact">
+    <div class="contact-grid">
+      <div class="panel reveal">
+        <h2 style="margin:0 0 6px">联系方式</h2>
+        <p style="color:var(--muted); margin:0 0 16px">最快的方式是发邮件，附上问题描述与设备信息。</p>
+        <dl class="kv">
+          <dt>支持邮箱</dt><dd><a href="mailto:neverfall@foxmail.com?subject=时光轨迹%20反馈">neverfall@foxmail.com</a></dd>
+          <dt>App Store</dt><dd><a href="https://apps.apple.com/app/id6752662508" target="_blank" rel="noopener">前往下载 / 评价</a></dd>
+          <dt>测试版</dt><dd><a href="https://testflight.apple.com/join/cUmPp5qg" target="_blank" rel="noopener">加入 TestFlight</a></dd>
+        </dl>
+        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap">
+          <a class="btn btn-primary" id="mailBtn" href="mailto:neverfall@foxmail.com">写邮件反馈</a>
+          <button class="btn btn-ghost" id="copyBtn" type="button">复制设备信息</button>
         </div>
-    </nav>
+      </div>
+      <div class="panel qr reveal">
+        <img src="/assets/qywx.png" alt="企业微信 二维码" loading="lazy" />
+        <small>微信扫码 · 添加客服</small>
+      </div>
+    </div>
+  </section>
 
-    <header>
-        <h1>Support</h1>
-        <p class="muted">We’re here to help. Find quick answers, troubleshoot issues, or reach us directly.</p>
-    </header>
+  <!-- 常见问题 -->
+  <section class="section faq" id="faq" style="padding-top:8px">
+    <div class="section-head reveal" style="margin-bottom:24px">
+      <span class="eyebrow">FAQ</span>
+      <h2>常见问题</h2>
+    </div>
+    <div class="prose" style="max-width:820px">
+      <details class="reveal"><summary>时光轨迹会一直定位我吗？</summary>
+        <div>记录由你掌控，可随时暂停。App 使用系统定位在后台记录轨迹；数据默认只保存在本机，除非你主动开启 iCloud 备份。</div></details>
+      <details class="reveal"><summary>需要哪些权限？</summary>
+        <div>后台记录需要“定位（始终 + 精确）”；“运动与健身”用于更准确的步数与活动识别；“通知”用于提醒（可选）；仅当你导入照片时才需要“照片”权限。除定位外均为可选。</div></details>
+      <details class="reveal"><summary>定位没有被记录？</summary>
+        <div><ol>
+          <li>设置 → 隐私与安全性 → 定位服务 → 时光轨迹 → 选择“始终”，并开启“精确位置”。</li>
+          <li>为 App 开启“后台 App 刷新”。</li>
+          <li>“低电量模式”可能暂停后台定位，建议关闭后重试。</li>
+          <li>重启 iPhone，再打开一次时光轨迹。</li>
+        </ol></div></details>
+      <details class="reveal"><summary>感觉比较耗电？</summary>
+        <div><ol>
+          <li>App 已使用智能采样；在信号良好、移动较少时功耗更低。</li>
+          <li>保持系统与 App 为最新版本。</li>
+          <li>长时间静止时会自动降低采样频率。</li>
+        </ol></div></details>
+      <details class="reveal"><summary>iCloud 备份如何工作？换机怎么恢复？</summary>
+        <div>开启后，轨迹会按天增量备份到你自己的 iCloud 私有空间（CloudKit）。换机或重装后本地为空时，App 会提示“从 iCloud 恢复”；也可在“iCloud 数据备份 → 数据同步”里手动“立即同步”，或用右上角“全量同步”确保云端与本机一致。<br />前提：各设备登录同一 Apple ID、已开启 iCloud、网络正常，并在同步时保持 App 在前台。</div></details>
+      <details class="reveal"><summary>“删除”一个轨迹点会怎样？</summary>
+        <div>删除是“隐藏”而非物理抹除：被删的点不再显示、不计入统计与迷雾，并且这个隐藏状态会随 iCloud 同步到你的其它设备，删了不会再“复活”。</div></details>
+      <details class="reveal"><summary>如何彻底清除数据？</summary>
+        <div>可在 App 设置中清除本机数据。如已开启 iCloud 备份，请一并在“iCloud 数据备份”中删除云端备份；在其它登录同一 Apple ID 的设备上也需相应清理。</div></details>
+    </div>
+  </section>
 
-    <!-- Quick links -->
-    <section class="grid">
-        <div class="card">
-            <h3>Contact</h3>
-            <p>Email: <a href="mailto:hello@timetrails.app">hello@timetrails.app</a> (replace with your actual email)</p>
-            <p>Press: <a href="mailto:press@timetrails.app">press@timetrails.app</a></p>
-            <p>Twitter/X: <a href="https://x.com/timetrails" target="_blank" rel="noopener">@timetrails</a> (optional)</p>
-            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap">
-                <a class="btn" href="#report">Report a bug</a>
-                <a class="btn" href="#faq">FAQs</a>
-                <a class="btn" href="#export">Export data</a>
-            </div>
-        </div>
-        <div class="card">
-            <h3>Status</h3>
-            <p>All systems normal.</p>
-            <p class="muted">(Optional: link to an external status page)</p>
-            <p><a href="#changelog">Changelog</a> · <a href="./privacy.html">Privacy</a></p>
-        </div>
-    </section>
+  <!-- 反馈 bug -->
+  <section class="section" id="report" style="padding-top:8px">
+    <div class="panel reveal">
+      <h2 style="margin:0 0 6px">反馈问题</h2>
+      <p style="color:var(--muted); margin:0">发邮件给我们，附上问题描述与下面的设备信息会更有助于定位（TestFlight 用户也可直接在 TestFlight 中反馈并附带日志）。</p>
+      <pre class="info" id="devinfo"></pre>
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <a class="btn btn-primary" id="mailBtn2" href="mailto:neverfall@foxmail.com">生成反馈邮件</a>
+        <button class="btn btn-ghost" id="copyBtn2" type="button">复制设备信息</button>
+      </div>
+    </div>
+  </section>
+</main>
 
-    <!-- Troubleshooting -->
-    <section id="troubleshoot" class="section">
-        <h2 style="margin:0 0 8px">Troubleshooting</h2>
-        <div class="grid">
-            <div class="card">
-                <h3>Location not recording</h3>
-                <ol class="muted">
-                    <li>Settings → Privacy → Location Services → TimeTrails → Allow “Always” and “Precise Location”.</li>
-                    <li>Enable Background App Refresh for TimeTrails.</li>
-                    <li>Low Power Mode may pause tracking; try disabling it.</li>
-                    <li>Reboot your iPhone, then open TimeTrails once.</li>
-                </ol>
-            </div>
-            <div class="card">
-                <h3>Battery usage feels high</h3>
-                <ol class="muted">
-                    <li>Use “Smart sampling” in Settings → Tracking.</li>
-                    <li>Exclude very short stays in Settings → Filters.</li>
-                    <li>Update to the latest app version.</li>
-                </ol>
-            </div>
-        </div>
-    </section>
-
-    <!-- Export / Import -->
-    <section id="export" class="section">
-        <h2 style="margin:0 0 8px">Export & Import</h2>
-        <div class="card">
-            <div class="kvs">
-                <div class="muted">Export</div>
-                <div>Settings → Data → Export → choose GPX/CSV and date range. Files save to the Files app or can be shared.</div>
-                <div class="muted">Import</div>
-                <div>From Files or the Share Sheet: choose a GPX file, then open with TimeTrails.</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Report a bug / Request support -->
-    <section id="report" class="section">
-        <h2 style="margin:0 0 8px">Report a bug</h2>
-        <div class="card">
-            <p>Send us an email with details and the device info below. Logs are optional but helpful.</p>
-            <div style="display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 12px">
-                <a class="btn" id="mailto-btn" href="#">Open email draft</a>
-                <button class="btn" id="copy-btn" type="button">Copy device info</button>
-            </div>
-            <pre id="devinfo" style="white-space:pre-wrap; background:rgba(148,163,184,.15); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,.12)"></pre>
-            <p class="muted" style="margin-top:10px">TestFlight: if you’re a beta tester, please submit from TestFlight with “Include device logs”.</p>
-        </div>
-    </section>
-
-    <!-- FAQs -->
-    <section id="faq" class="section faq">
-        <h2 style="margin:0 0 8px">FAQs</h2>
-        <details>
-            <summary>Does TimeTrails track me all the time?</summary>
-            <div class="muted">You control what’s collected. Recording uses iOS location services and can be paused anytime. Data stays on-device unless you enable sync.</div>
-        </details>
-        <details>
-            <summary>What permissions are required?</summary>
-            <div class="muted">Location (Always & Precise) for background trails, Motion for better activity detection, Photos if you import media, and Notifications for reminders—all optional except Location for recording.</div>
-        </details>
-        <details>
-            <summary>How do I delete my data?</summary>
-            <div class="muted">In Settings → Data → Delete local data. If iCloud sync is enabled, disable it first, then delete local data across each device as needed.</div>
-        </details>
-    </section>
-
-    <!-- Changelog / Legal -->
-    <section id="changelog" class="section">
-        <div class="grid">
-            <div class="card">
-                <h3>Changelog</h3>
-                <p class="muted">(Optional) Publish your release notes here, or link to a CHANGELOG.md.</p>
-                <p><a href="./changelog.html">View changelog</a></p>
-            </div>
-            <div class="card">
-                <h3>Legal</h3>
-                <p><a href="./privacy.html">Privacy Policy</a></p>
-                <p class="muted">© <span id="year"></span> Davion Labs. All rights reserved.</p>
-            </div>
-        </div>
-    </section>
-
-    <footer class="footer">
-        <p>Made with care. If you need one-on-one help, just email us.</p>
-    </footer>
-</div>
+<footer class="footer">
+  <div class="container">
+    <a class="brand" href="/"><img src="/assets/logo.svg" alt="" /><span>TimeTrails</span><span class="zh">时光轨迹</span></a>
+    <div class="foot-links">
+      <a href="/">首页</a><a href="/support/">技术支持</a><a href="/privacy/">隐私政策</a>
+      <a href="mailto:neverfall@foxmail.com">邮箱</a>
+    </div>
+    <div class="foot-note">© <span id="y"></span> 时光轨迹 TimeTrails</div>
+  </div>
+</footer>
 
 <script>
-    // Fill year
-    document.getElementById('year').textContent = new Date().getFullYear();
-
-    // Collect simple device info (client-side)
-    const devinfo = {
-      userAgent: navigator.userAgent,
-      language: navigator.language,
-      platform: navigator.platform,
-      screen: `${screen.width}x${screen.height}@${window.devicePixelRatio}`,
-      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      url: location.href,
-      time: new Date().toISOString(),
-      app: 'TimeTrails',
-      version: '1.0.0' // replace dynamically if you expose it
-    };
-    const devinfoStr = Object.entries(devinfo).map(([k,v])=>`${k}: ${v}`).join('\n');
-    document.getElementById('devinfo').textContent = devinfoStr;
-
-    // mailto with prefilled subject & body
-    const to = 'hello@timetrails.app'; // replace with your support address
-    const subject = encodeURIComponent('TimeTrails Support Request');
-    const body = encodeURIComponent(`Describe the issue here...\n\n---\nDevice info:\n${devinfoStr}\n`);
-    const mailto = `mailto:${to}?subject=${subject}&body=${body}`;
-    document.getElementById('mailto-btn').setAttribute('href', mailto);
-
-    // Copy device info
-    document.getElementById('copy-btn').addEventListener('click', async ()=>{
-      try{ await navigator.clipboard.writeText(devinfoStr); alert('Device info copied. Paste it into your email.'); }
-      catch(e){ alert('Copy failed. Select and copy manually.'); }
-    });
+  document.getElementById('y').textContent = new Date().getFullYear();
+  const info = {
+    应用:"时光轨迹 TimeTrails",
+    系统:navigator.userAgent,
+    语言:navigator.language,
+    屏幕:`${screen.width}×${screen.height}@${window.devicePixelRatio}x`,
+    时区:Intl.DateTimeFormat().resolvedOptions().timeZone,
+    时间:new Date().toISOString()
+  };
+  const text = Object.entries(info).map(([k,v])=>`${k}: ${v}`).join('\n');
+  document.getElementById('devinfo').textContent = text;
+  const subject = encodeURIComponent('时光轨迹 反馈');
+  const body = encodeURIComponent(`请描述你遇到的问题：\n\n\n———\n设备信息：\n${text}\n`);
+  const mailto = `mailto:neverfall@foxmail.com?subject=${subject}&body=${body}`;
+  ['mailBtn','mailBtn2'].forEach(id=>document.getElementById(id)?.setAttribute('href',mailto));
+  async function copy(){ try{ await navigator.clipboard.writeText(text); alert('设备信息已复制，粘贴到邮件即可。'); }catch(e){ alert('复制失败，请手动选择复制。'); } }
+  ['copyBtn','copyBtn2'].forEach(id=>document.getElementById(id)?.addEventListener('click',copy));
+  (function(){
+    var els = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+    var showAll = function(){ els.forEach(function(e){ e.classList.add('in'); }); };
+    if(!('IntersectionObserver' in window)){ showAll(); return; }
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }); }, {threshold:.1});
+    els.forEach(function(el){ io.observe(el); });
+    setTimeout(showAll, 1800);
+  })();
 </script>
 </body>
 </html>
